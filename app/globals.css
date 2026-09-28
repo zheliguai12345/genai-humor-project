@@ -36,5 +36,6 @@ input[type=file] { padding: .5rem; }
 .eyebrow { font-size: .8rem; letter-spacing: .12em; text-transform: uppercase; color: #52525b; }
 .notice { padding: 1rem; border-radius: 8px; background: #f4f4f5; }
 .avatar img { border-radius: 50%; object-fit: cover; }
+.vote-controls { display: flex; flex-wrap: wrap; gap: .75rem; }
 [role=alert] { color: #b91c1c; }
 input:focus-visible, button:focus-visible, a:focus-visible { outline: 2px solid #52525b; outline-offset: 3px; }
