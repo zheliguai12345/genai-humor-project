@@ -62,6 +62,25 @@ test('walking URLs preserve ordered specific stops, filter generic instructions,
   assert.equal(embed.searchParams.get('origin'), full.searchParams.get('origin'));
   for (const generic of ['Look up, anywhere north of Canal St', 'A record shop', 'The nearest cafe', 'New York', 'Veselka or a successor', 'Park / diner']) assert.equal(specificMapPlace(generic), false);
 });
+test('Any/A stops with on discard every part of the venue prefix before parsing locations', () => {
+  for (const place of ['Any bodega on 48th Ave, Sunnyside',
+    'Any bodega, open late on 48th Ave, Sunnyside',
+    'A grocery at the corner on 48th Ave, Sunnyside']) {
+    assert.equal(mapQuery(place), '48th Ave, Sunnyside, New York City');
+  }
+  const source = 'A coffee cart in the morning on Broadway & 48th St, Midtown';
+  const route = journeyRoute({id:'generic-on',stops:[{position:1,place:source},
+    {position:2,place:'Any bodega on 48th Ave, Sunnyside'},
+    {position:3,place:'Gantry Plaza State Park, 4-09 47th Rd'}]});
+  for (const url of [route.fullUrl,routeEmbedUrl(route.places,'isolated-key')]) {
+    const params = new URL(url).searchParams;
+    assert.equal(params.get('origin'),'Broadway & 48th St, Midtown, New York City');
+    assert.equal(params.get('waypoints'),'48th Ave, Sunnyside, New York City');
+    assert.match(url,/origin=[^&]*%26/);
+    assert.doesNotMatch(url,/bodega|coffee|morning|corner/);
+  }
+  assert.equal(source,'A coffee cart in the morning on Broadway & 48th St, Midtown');
+});
 test('ampersands in every route field are encoded once rather than interpreted as parameters', () => {
   const places=['Broadway & Wall St, New York City','Greene St & Grand St, New York City','Fifth Ave & 59th St, New York City'];
   const full=journeyRoute({id:'encoding-test',stops:places.map((place,index)=>({position:index+1,place:place.replace(', New York City','')}))});
@@ -87,4 +106,18 @@ test('missing embed key keeps the full route link and renders no iframe', async 
   const { RouteMap } = await moduleLoader('app/components/route-map.tsx', { 'react/jsx-runtime': jsx }, {});
   const html = renderToStaticMarkup(React.createElement(RouteMap, { journey }));
   assert.match(html, /Open full route in Google Maps/); assert.doesNotMatch(html, /<iframe/);
+});
+test('Friendly route uses the searchable cross street instead of an unrecognized viaduct name', () => {
+  const stops=[{position:1,place:'46th St–Bliss St Station, Roosevelt Ave & 46th St'},
+    {position:2,place:'Any bodega on 48th Ave, Sunnyside'},
+    {position:3,place:'49th Avenue Viaduct, 49th Ave & 21st St'},
+    {position:4,place:'Gantry Plaza State Park, 4-09 47th Rd'}];
+  const route=journeyRoute({id:'6403573b-eb79-4d9b-915a-fc188ca15133',stops});
+  assert.equal(route.places.length,4);
+  assert.equal(route.places[2],'49th Ave & 21st St, New York City');
+  for(const url of [route.fullUrl,routeEmbedUrl(route.places,'isolated-key')]) {
+    assert.equal(new URL(url).searchParams.get('waypoints'),'48th Ave, Sunnyside, New York City|49th Ave & 21st St, New York City');
+    assert.doesNotMatch(url,/Viaduct/);
+  }
+  assert.equal(stops[2].place,'49th Avenue Viaduct, 49th Ave & 21st St');
 });

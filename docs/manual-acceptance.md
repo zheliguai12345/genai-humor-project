@@ -26,6 +26,8 @@ Cover searches use the first stop; stop searches use their own place. The shared
 
 Map queries use `New York City` as the locality; origin, destination and pipe-separated waypoints are encoded with `URLSearchParams`, including `%26` for literal ampersands. On October 13, 2026, live Embed verification completed within the twenty-minute diagnostic window: The Familiar Procurement Route (already published at verification time) and all four editorial seeds showed neighborhood-scale walking routes. No real Embed key was printed or read back from an iframe URL; encoding tests use an isolated dummy key. New generations also receive the exact time-of-day image-query instruction.
 
+`Friendly Neighborhood Surveillance` (`6403573b-eb79-4d9b-915a-fc188ca15133`) was also verified live on October 13, 2026. Google Maps could not resolve its third stop's `49th Avenue Viaduct` name; a map-only anchor uses the existing `49th Ave & 21st St` intersection while preserving the displayed and stored place. The Embed now shows the Queens walking route, approximately 4.1 miles and 1 hour 32 minutes. Generic `Any`/`A` places containing `on` discard the complete venue prefix before parsing street and neighborhood segments. Its approved cover is Erik Mclean's Unsplash photo `8SeJUmfahu0`; metadata lookup and the single download-tracking request both returned HTTP 200.
+
 Deletion rechecks IDs, titles, publication status and all reviewed counts. Existing foreign keys cascade stops/votes; generation history is retained with `journey_id` cleared. If counts change before execution, obtain a fresh review. Deleting the two test Journeys may remove all current missing-photo targets, in which case skip repair calls.
 
 ## Seed route check
