@@ -14,3 +14,24 @@ Remaining live checks should be run by the user on the exact deployment URL afte
 - During actual provider recovery, confirm the fallback stage reads `Busy right now — trying a faster model…`. Isolated tests cover this stage; the successful paid-tier verification did not need a fallback.
 
 Publication, profile upload, deployed provider recovery, and a second-account ownership check are not claimed as completed live acceptance. Their server boundaries and error paths are covered by isolated tests.
+
+## One-time photo maintenance
+
+`node scripts/repair-published-images.mjs --dry-run --plan /tmp/elsewhere-image-repair-plan.json` reads published Journeys and lists null-photo rows plus the two explicitly requested test-Journey deletion counts. It uses one Unsplash search to inspect quota, without database writes or download tracking. Add `--database-only` to omit that quota request. Keep the resulting plan outside Git and obtain explicit approval before using `--apply-images` or `--delete-approved-journeys` with the same `--plan` path.
+
+Cover searches use the first stop; stop searches use their own place. The shared map-query helper keeps the venue name and address/cross-street segments separated by commas or middle dots, while removing narrative fragments. Repairs keep the first Unsplash result's hotlink and attribution, update only a still-null image, and request its download location once. Calls are sequential, capped at one fresh quota probe plus two requests per approved image, with a five-request reserve and no retries. Unknown/insufficient quota or provider failure stops the operation. A tracking failure after a saved image is reported and stops the batch; it does not trigger another download request.
+
+Deletion rechecks IDs, titles, publication status and all reviewed counts. Existing foreign keys cascade stops/votes; generation history is retained with `journey_id` cleared. If counts change before execution, obtain a fresh review. Deleting the two test Journeys may remove all current missing-photo targets, in which case skip repair calls.
+
+## Seed route check
+
+Google Maps walking directions, opened from the shared route-query URLs on October 13, 2026, returned the following totals. Walking times exclude time spent at stops. App place text remains unchanged; map queries retain venue names, street addresses and cross streets while discarding narrative fragments.
+
+| Journey | Distance | Walking time |
+| --- | --- | --- |
+| The Museum That Doesn't Exist | 1.0 mile | 22 min |
+| The Last Day on Earth | 2.2 miles | 52 min |
+| New York's Secret Time Machine | 1.3 miles | 29 min |
+| A Billionaire's Day on $25 | 2.5 miles | 56 min |
+
+The two reviewed test Journeys were deleted with their eight stops and one vote after explicit approval. Their two generation records were retained with cleared Journey associations. The post-deletion dry-run found no missing photos among the five remaining published Journeys; no repair searches or tracking calls were needed.

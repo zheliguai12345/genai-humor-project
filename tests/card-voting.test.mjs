@@ -38,8 +38,9 @@ test('card markup includes the shared vote widget and metadata, while private ca
     'next/link':{default:({children,...props})=>React.createElement('a',props,children)},
     'next/navigation':{usePathname:()=>"/",useRouter:()=>({refresh(){}})},'@/app/journey-actions':{vote:()=>{throw Error('No writes during rendering');}}});
   const journey={id,status:'published',title:'Small adventure',hook:'A short premise.',area:'Queens',budget_label:'Under $25',mode:'Walking · 4 stops',cover_image:null};
-  const publicHtml=renderToStaticMarkup(React.createElement(JourneyCard,{journey,counts:{up:3,down:1},authenticated:true,currentVote:'up'}));
+  const publicHtml=renderToStaticMarkup(React.createElement(JourneyCard,{journey,counts:{up:3,down:1},authenticated:true,currentVote:'up',truncateHook:true}));
   assert.match(publicHtml,/Cancel upvote/);assert.match(publicHtml,/Downvote/);assert.match(publicHtml.replace(/<[^>]*>/g,''),/Queens · Under \$25 · 4 stops/);assert.match(publicHtml,/class="card-link"/);
   const privateHtml=renderToStaticMarkup(React.createElement(JourneyCard,{journey:{...journey,status:'draft'},privateView:true}));
-  assert.match(privateHtml,/Draft/);assert.match(privateHtml,/\/preview\//);assert.doesNotMatch(privateHtml,/Upvote|Downvote/);
+  assert.match(publicHtml,/card-hook-truncated/);
+  assert.match(privateHtml,/Draft/);assert.match(privateHtml,/\/preview\//);assert.doesNotMatch(privateHtml,/Upvote|Downvote|card-hook-truncated/);
 });

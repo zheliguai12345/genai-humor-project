@@ -78,7 +78,8 @@ main { width:min(calc(100% - 64px),1280px); margin:auto; padding:32px 0 56px; mi
 .card-link { text-decoration:none; }
 .card-link::after { content:""; position:absolute; inset:0; z-index:1; border-radius:12px; }
 .card-link:focus-visible::after { outline:3px solid var(--accent); outline-offset:4px; }
-.card-hook { margin:10px 0 9px; font-size:16px; line-height:1.45; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; overflow-wrap:anywhere; }
+.card-hook { margin:10px 0 9px; font-size:16px; line-height:1.45; overflow-wrap:anywhere; }
+.card-hook-truncated { display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
 .card-meta { font-size:14px; color:var(--muted); white-space:normal; overflow-wrap:anywhere; margin:0 0 12px; }
 .vote-widget { position:relative; z-index:3; width:fit-content; max-width:100%; }
 .vote-controls { display:flex; align-items:center; gap:4px; border:1px solid var(--line); border-radius:6px; background:var(--paper); width:fit-content; }

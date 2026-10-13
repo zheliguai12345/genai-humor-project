@@ -326,7 +326,8 @@ test('requested physical-action and neighborhood quality rules appear verbatim i
   for(const sentence of ['- A move is something the body does: walk, touch, count, order, sit, stand, look up, listen, mail, trade. Never "write down", "note", "think about", "ask yourself", "reflect", "imagine", or "consider".',
     '- Choose places a student would not already plan to visit. Avoid churches, museums, and landmarks unless the premise cannot work without one, and never more than one per journey.',
     '- Vary neighborhoods. Do not default to Lower Manhattan, Times Square, or Midtown.',
-    '- If you are not certain of a date, a sequence of events, or a cause and effect, leave it out. A vivid true detail is better than a dramatic uncertain one.']) assert.ok(prompt.SYSTEM_PROMPT.includes(sentence));
+    '- If you are not certain of a date, a sequence of events, or a cause and effect, leave it out. A vivid true detail is better than a dramatic uncertain one.',
+    '- The place field contains only the place name and its street address or nearest cross streets, written so it can be searched on Google Maps. Put any description in the body, never in the place field.']) assert.ok(prompt.SYSTEM_PROMPT.includes(sentence));
 });
 
 test('migration seeds match the maintained editorial copy and enable RLS without touching tasks', () => {

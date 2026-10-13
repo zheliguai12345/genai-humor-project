@@ -14,9 +14,24 @@ export function specificMapPlace(place: string): boolean {
   return /\b(street|st|avenue|ave|road|rd|broadway|plaza|park|garden|bridge|tavern|museum|shop|store|grocery|cafe|café|library|station|terminal|hall|market)\b|\d/i.test(place)
     || /^[A-Z][\p{L}'’.-]+(?:\s+[A-Z][\p{L}'’.-]+)*$/u.test(place);
 }
+export function mapQuery(place: string): string {
+  const parts = place.split(/[·,]/).map(part => part.trim()).filter(Boolean);
+  const descriptive = /\b(looking|toward|towards|corner|stop|block)\b/i;
+  const address = /\d|\b(street|st|avenue|ave|broadway|pl|place|plaza|park|road|rd|blvd|boulevard|way|drive|dr|lane|ln)\b|&/i;
+  const locations = parts.flatMap((part, index) => {
+    if (index === 0) {
+      // Keep the venue identity, dropping an appended narrative qualifier such as "block".
+      const name = part.replace(/\s+\b(block|stop|corner|looking|toward|towards)\b.*$/i, "").trim();
+      return name && !/^[a-z]/.test(name) ? [name] : [];
+    }
+    return !/^[a-z]/.test(part) && !descriptive.test(part) && address.test(part) ? [part] : [];
+  });
+  return `${locations.join(", ")}, New York, NY`;
+}
 export function journeyRoute(journey: Pick<Journey, "id" | "stops">) {
   const places = [...journey.stops].sort((a, b) => a.position - b.position).map(stop =>
-    editorialAnchors[journey.id]?.[stop.position] ?? stop.place).filter(specificMapPlace).map(place => `${place}, New York, NY`);
+    editorialAnchors[journey.id]?.[stop.position] ?? stop.place).map(mapQuery)
+    .filter(query => specificMapPlace(query.replace(/, New York, NY$/, "")));
   const parameters = new URLSearchParams({ api: "1", travelmode: "walking" });
   if (places.length) {
     parameters.set("origin", places[0]); parameters.set("destination", places[places.length - 1]);
