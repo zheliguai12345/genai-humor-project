@@ -1,6 +1,6 @@
-# Phase 4 Deployment Checklist
+# Deployment Checklist
 
-Prepared for the user to perform manually. No push or deployment is part of this phase. Do not reapply the accepted Phase 2 migration.
+Prepared for manual deployment. Do not reapply the already-applied backend migration.
 
 ## Runtime variables
 

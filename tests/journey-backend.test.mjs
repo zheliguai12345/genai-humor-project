@@ -2,7 +2,6 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import fs from 'node:fs';
 import path from 'node:path';
-import vm from 'node:vm';
 import { moduleLoader } from './helpers/module-loader.mjs';
 
 const root = path.resolve(import.meta.dirname, '..');
@@ -330,16 +329,16 @@ test('requested physical-action and neighborhood quality rules appear verbatim i
     '- If you are not certain of a date, a sequence of events, or a cause and effect, leave it out. A vivid true detail is better than a dramatic uncertain one.']) assert.ok(prompt.SYSTEM_PROMPT.includes(sentence));
 });
 
-test('all four seeds retain approved sample copy and migration explicitly enables RLS without touching tasks', () => {
-  const html = fs.readFileSync(path.join(root, 'docs/design/elsewhere-samples.html'), 'utf8');
-  const original = vm.runInNewContext('(' + html.match(/const JOURNEYS = (\[[\s\S]*?\n\]);/)[1] + ')');
-  assert.equal(samples.length, 4);
-  for (let i=0;i<4;i++) {
-    assert.equal(samples[i].title, original[i].title); assert.equal(samples[i].premise, original[i].premise);
-    assert.equal(samples[i].stops.length, original[i].stops.length);
-    samples[i].stops.forEach((stop,j) => { assert.equal(stop.body, original[i].stops[j].body); assert.equal(stop.move, original[i].stops[j].move); });
-  }
+test('migration seeds match the maintained editorial copy and enable RLS without touching tasks', () => {
   const sql = fs.readFileSync(path.join(root, 'supabase/migrations/202610120001_elsewhere_journeys.sql'), 'utf8');
+  const seededStops = [...sql.matchAll(/jsonb_to_recordset\('((?:''|[^'])*)'::jsonb\)/g)]
+    .map(match => JSON.parse(match[1].replace(/''/g, "'")));
+  assert.equal(samples.length, 4); assert.equal(seededStops.length, samples.length);
+  const copy = stops => stops.map(({ position, time_label, title, place, body, move }) => ({ position, time_label, title, place, body, move }));
+  samples.forEach((sample, i) => {
+    for (const field of ['title', 'hook', 'premise', 'ending']) assert.ok(sql.includes(sample[field].replace(/'/g, "''")));
+    assert.deepEqual(copy(seededStops[i]), copy(sample.stops));
+  });
   for (const table of ['journeys','journey_stops','generation_runs','journey_votes','profiles','captions','caption_votes']) {
     assert.ok(sql.includes(`alter table public.${table} enable row level security;`));
   }

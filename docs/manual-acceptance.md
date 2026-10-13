@@ -1,4 +1,4 @@
-# Phase 4 Manual Acceptance
+# Manual Acceptance
 
 Completed locally with the real Google-authenticated account: one /create generation, persisted model/prompts/raw output, author-only Preview, quota decrement by one, Profile journey link, card voting and detail voting, vote cancellation/change, refresh persistence, and restoration of the original test vote state. Signed-out browsing and vote guidance were checked separately. Test fixtures cover anonymous and other-author denial, failure rollback, photo timeouts, and bounded provider recovery.
 
