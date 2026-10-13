@@ -7,7 +7,9 @@ const routeAnchors: Record<string, Record<number, string>> = {
     4: "Nom Wah Tea Parlor, 13 Doyers Street",
   },
   "e15e0000-0000-4000-8000-000000000004": { 2: "Fifth Avenue & East 82nd Street" },
-  "6403573b-eb79-4d9b-915a-fc188ca15133": { 3: "49th Ave & 21st St" },
+  "6403573b-eb79-4d9b-915a-fc188ca15133": {
+    1: "Queens Blvd & 46th St, Queens", 3: "49th Ave & 21st St, Queens",
+  },
 };
 export function specificMapPlace(place: string): boolean {
   if (!place.trim() || /\b(any|anywhere|somewhere|successor|or)\b|on your way|look up|[\/|]/i.test(place)
@@ -15,7 +17,7 @@ export function specificMapPlace(place: string): boolean {
   return /\b(street|st|avenue|ave|road|rd|broadway|plaza|park|garden|bridge|tavern|museum|shop|store|grocery|cafe|café|library|station|terminal|hall|market)\b|\d/i.test(place)
     || /^[A-Z][\p{L}'’.-]+(?:\s+[A-Z][\p{L}'’.-]+)*$/u.test(place);
 }
-export function mapQuery(place: string): string {
+export function mapQuery(place: string, options: { preferAddress?: boolean } = {}): string {
   const input = place.trim();
   const categoryStop = /^(Any|A)\s+/i.test(input);
   // Strip the entire generic venue prefix before splitting address segments.
@@ -24,6 +26,20 @@ export function mapQuery(place: string): string {
   const descriptive = /\b(looking|toward|towards|corner|stop|block)\b/i;
   const address = /\d|\b(street|st|avenue|ave|broadway|pl|place|plaza|park|road|rd|blvd|boulevard|way|drive|dr|lane|ln)\b|&/i;
   const neighborhood = /^[A-Z][\p{L}'’.-]+(?:\s+[A-Z][\p{L}'’.-]+)*$/u;
+  if (!categoryStop && options.preferAddress !== false) {
+    const street = /\b(street|st|avenue|ave|road|rd|boulevard|blvd|place|pl|lane|ln|drive|dr|broadway|way)\b/i;
+    const preciseAddress = parts.find(part => !descriptive.test(part) && !/^[a-z]/.test(part) && street.test(part) && (
+      /^\d+(?:-\d+)?[A-Z]?\s+/i.test(part) || /\s+(?:&|and)\s+/i.test(part) ||
+      (/\d/.test(part) && /\b(street|st|avenue|ave|road|rd|boulevard|blvd|place|pl|lane|ln|drive|dr|way)\.?$/i.test(part))
+    ));
+    if (preciseAddress) {
+      // Keep locality fragments, but never prepend the venue that Google may not recognize.
+      const districts = parts.filter((part, index) => part !== preciseAddress &&
+        (index > 0 || /^(Manhattan|Brooklyn|Queens|Bronx|The Bronx|Staten Island)$/i.test(part)) &&
+        neighborhood.test(part) && !street.test(part) && !/\d/.test(part) && !descriptive.test(part));
+      return `${[preciseAddress, ...districts].join(", ")}, New York City`;
+    }
+  }
   const locations = parts.flatMap((part, index) => {
     if (categoryStop) {
       // Generic venues map to their street/neighborhood, never to a guessed business.
@@ -42,7 +58,7 @@ export function mapQuery(place: string): string {
 }
 export function journeyRoute(journey: Pick<Journey, "id" | "stops">) {
   const places = [...journey.stops].sort((a, b) => a.position - b.position).map(stop =>
-    routeAnchors[journey.id]?.[stop.position] ?? stop.place).map(mapQuery)
+    routeAnchors[journey.id]?.[stop.position] ?? stop.place).map(place => mapQuery(place))
     .filter(query => specificMapPlace(query.replace(/, New York City$/, "")));
   const parameters = new URLSearchParams({ api: "1", travelmode: "walking" });
   if (places.length) {

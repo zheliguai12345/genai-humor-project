@@ -10,15 +10,20 @@ const journey = { id: 'local-test', title: 'A short walk', stops: [
   { position: 1, place: 'Greene Street' }, { position: 2, place: 'Any blue mailbox on your way south' },
   { position: 3, place: 'Columbus Park' }, { position: 4, place: 'Stone Street' },
 ] };
-test('map queries retain all address/cross-street segments and remove narrative fragments', () => {
+test('map queries prefer a precise address/cross street and remove venue and narrative fragments', () => {
   for (const [place, expected] of [
     ["The High Line at 14th Street, looking toward the old meatpackers' cold storage", 'The High Line at 14th Street'],
-    ["Faicco's Italian Specialties, 260 Bleecker St", "Faicco's Italian Specialties, 260 Bleecker St"],
-    ['Trinity Church Cemetery, Broadway & Wall St', 'Trinity Church Cemetery, Broadway & Wall St'],
-    ['Fraunces Tavern block, 54 Pearl St · corner deli stop', 'Fraunces Tavern, 54 Pearl St'],
-    ['Gantry Plaza State Park, Center Blvd & 48th Ave', 'Gantry Plaza State Park, Center Blvd & 48th Ave'],
-    ['Conservatory Garden, Central Park · Fifth Ave & 105th St', 'Conservatory Garden, Central Park, Fifth Ave & 105th St'],
-    ['Sikder Grocery, 43-03 48th Ave, outside the shop', 'Sikder Grocery, 43-03 48th Ave'],
+    ["Faicco's Italian Specialties, 260 Bleecker St", '260 Bleecker St'],
+    ['Trinity Church Cemetery, Broadway & Wall St', 'Broadway & Wall St'],
+    ['Fraunces Tavern block, 54 Pearl St · corner deli stop', '54 Pearl St'],
+    ['Gantry Plaza State Park, Center Blvd & 48th Ave', 'Center Blvd & 48th Ave'],
+    ['Conservatory Garden, Central Park · Fifth Ave & 105th St', 'Fifth Ave & 105th St, Central Park'],
+    ['Sikder Grocery, 43-03 48th Ave, outside the shop', '43-03 48th Ave'],
+    ['Gantry Plaza State Park · 4-44 47th Rd, Queens', '4-44 47th Rd, Queens'],
+    ['A-1 Record Shop, 439 E 6th St', '439 E 6th St'],
+    ['Neighborhood Cafe, Brooklyn · 24 Bond St', '24 Bond St, Brooklyn'],
+    ['49th Avenue Viaduct, 49th Ave and 21st St, Queens', '49th Ave and 21st St, Queens'],
+    ['An overlook, 47th Rd, Long Island City', '47th Rd, Long Island City'],
     ['Columbus Park', 'Columbus Park'],
   ]) assert.equal(mapQuery(place), `${expected}, New York City`);
 });
@@ -38,7 +43,8 @@ test('Any/A category stops map only to the street and neighborhood, including in
     ['A deli at 54 Pearl St, Financial District · corner stop', '54 Pearl St, Financial District'],
     ['A coffee cart, Fifth Ave & 59th St', 'Fifth Ave & 59th St'],
   ]) assert.equal(mapQuery(place), `${expected}, New York City`);
-  assert.equal(mapQuery('A-1 Record Shop, 439 E 6th St'), 'A-1 Record Shop, 439 E 6th St, New York City');
+  assert.equal(mapQuery('A-1 Record Shop, 439 E 6th St'), '439 E 6th St, New York City');
+  assert.equal(mapQuery("Faicco's Italian Specialties, 260 Bleecker St", {preferAddress:false}), "Faicco's Italian Specialties, 260 Bleecker St, New York City");
   const stops = [{ position: 1, place: 'Any bodega on 48th Ave, Sunnyside' },
     { position: 2, place: 'A coffee cart on Broadway, Upper West Side' }];
   const route = journeyRoute({ id: 'category-test', stops });
@@ -114,10 +120,13 @@ test('Friendly route uses the searchable cross street instead of an unrecognized
     {position:4,place:'Gantry Plaza State Park, 4-09 47th Rd'}];
   const route=journeyRoute({id:'6403573b-eb79-4d9b-915a-fc188ca15133',stops});
   assert.equal(route.places.length,4);
-  assert.equal(route.places[2],'49th Ave & 21st St, New York City');
+  assert.equal(route.places[2],'49th Ave & 21st St, Queens, New York City');
   for(const url of [route.fullUrl,routeEmbedUrl(route.places,'isolated-key')]) {
-    assert.equal(new URL(url).searchParams.get('waypoints'),'48th Ave, Sunnyside, New York City|49th Ave & 21st St, New York City');
+    assert.equal(new URL(url).searchParams.get('origin'),'Queens Blvd & 46th St, Queens, New York City');
+    assert.equal(new URL(url).searchParams.get('waypoints'),'48th Ave, Sunnyside, New York City|49th Ave & 21st St, Queens, New York City');
+    assert.match(url,/waypoints=[^&]*49th\+Ave\+%26\+21st\+St/);
     assert.doesNotMatch(url,/Viaduct/);
   }
+  assert.equal(stops[0].place,'46th St–Bliss St Station, Roosevelt Ave & 46th St');
   assert.equal(stops[2].place,'49th Avenue Viaduct, 49th Ave & 21st St');
 });
