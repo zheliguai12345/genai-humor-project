@@ -34,12 +34,12 @@ export function mapQuery(place: string): string {
     }
     return !/^[a-z]/.test(part) && !descriptive.test(part) && address.test(part) ? [part] : [];
   });
-  return `${locations.join(", ")}, New York, NY`;
+  return `${locations.join(", ")}, New York City`;
 }
 export function journeyRoute(journey: Pick<Journey, "id" | "stops">) {
   const places = [...journey.stops].sort((a, b) => a.position - b.position).map(stop =>
     editorialAnchors[journey.id]?.[stop.position] ?? stop.place).map(mapQuery)
-    .filter(query => specificMapPlace(query.replace(/, New York, NY$/, "")));
+    .filter(query => specificMapPlace(query.replace(/, New York City$/, "")));
   const parameters = new URLSearchParams({ api: "1", travelmode: "walking" });
   if (places.length) {
     parameters.set("origin", places[0]); parameters.set("destination", places[places.length - 1]);

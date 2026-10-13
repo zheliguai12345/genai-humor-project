@@ -54,3 +54,9 @@ test('anonymous streaming generation is denied before quota, model, or private p
   const response=await fetch(origin+'/api/journeys',{method:'POST',headers:{Origin:origin,'Content-Type':'application/json',Accept:'application/x-ndjson'},body:JSON.stringify(input)});
   assert.equal(response.status,401);assert.deepEqual(await response.json(),{error:'Sign in to continue.'});
 });
+test('public Discover and Journey pages expose no Profile delete controls',async()=>{
+  for(const path of ['/','/journeys/e15e0000-0000-4000-8000-000000000001']) {
+    const html=(await(await fetch(origin+path)).text()).replace(/key=[^&"<]+/g,'key=[redacted]');
+    assert.doesNotMatch(html,/profile-delete-button/);
+  }
+});

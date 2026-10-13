@@ -64,6 +64,20 @@ export async function getOwnGenerationRuns(): Promise<GenerationRun[]> {
   if (error) throw new JourneyServiceError("Unable to load your generation history.");
   return data;
 }
+export async function deleteOwnJourney(id: string) {
+  const user = await requireUser();
+  validateId(id);
+  const client = journeyClient();
+  const current = await client.from("journeys").select("id,author_id,is_editorial").eq("id", id).maybeSingle();
+  if (current.error) throw new JourneyServiceError("Unable to check this journey.");
+  if (!current.data || current.data.author_id !== user.id || current.data.is_editorial) {
+    throw new JourneyAccessError("You can only delete your own non-editorial journeys.");
+  }
+  const result = await client.from("journeys").delete().eq("id", id).eq("author_id", user.id).eq("is_editorial", false).select("id");
+  if (result.error || result.data?.length !== 1) throw new JourneyServiceError("Journey not deleted. Please try again.");
+  // Existing foreign keys cascade stops/votes and clear generation_runs.journey_id, preserving prompts/history.
+  return { id };
+}
 export async function getOwnJourneyVote(id: string) {
   const user = await requireUser();
   validateId(id);

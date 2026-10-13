@@ -18,7 +18,7 @@ export function imageTargets(journeys) {
     const add = (position, place) => {
       if (!place?.trim()) fail('A missing photo has no source place; review the Journey first.');
       rows.push({ journey_id: journey.id, journey_title: journey.title, position, place,
-        search_query: `${mapQuery(place).replace(/, New York, NY$/, '')} New York` });
+        search_query: `${mapQuery(place).replace(/, New York City$/, '')} New York` });
     };
     if (journey.cover_image === null) add(0, stops[0]?.place);
     for (const stop of stops) if (stop.image === null) add(stop.position, stop.place);

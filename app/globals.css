@@ -167,6 +167,9 @@ legend { font-size:14px; font-weight:600; margin-bottom:9px; }
 .profile-form>.button { align-self:flex-start; }
 .profile-form>p { margin-top:10px; }
 .profile-journeys-title { margin-bottom:24px; }
+.profile-journey { min-width:0; }
+.profile-delete-button { min-height:44px; padding:8px 14px; margin-top:10px; border:1px solid var(--line); border-radius:6px; background:var(--white); color:var(--accent); font-size:14px; }
+.profile-delete-button:hover { border-color:var(--accent); background:var(--wash); }
 .privacy-page { max-width:760px; }
 .privacy-page h1 { margin-bottom:24px; }
 .privacy-page h2 { margin:24px 0 12px; }

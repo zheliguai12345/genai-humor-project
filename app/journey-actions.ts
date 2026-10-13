@@ -1,6 +1,6 @@
 "use server";
 import { revalidatePath } from "next/cache";
-import { generateJourney, getGenerationQuota, publishJourney as publish, voteOnJourney } from "@/utils/supabase/journeys";
+import { generateJourney, getGenerationQuota, publishJourney as publish, voteOnJourney, deleteOwnJourney } from "@/utils/supabase/journeys";
 import { JourneyAccessError, JourneyAuthError, JourneyInputError, JourneyServiceError } from "@/utils/journeys/validation";
 
 function message(error: unknown) {
@@ -28,6 +28,13 @@ export async function vote(id: string, value: unknown) {
     const result = await voteOnJourney(id, value);
     revalidatePath("/");
     revalidatePath(`/journeys/${id}`);
+    return { data: result };
+  } catch (error) { return { error: message(error) }; }
+}
+export async function deleteJourney(id: string) {
+  try {
+    const result = await deleteOwnJourney(id);
+    for (const path of ["/profile", "/", "/discover", `/journeys/${id}`, `/preview/${id}`]) revalidatePath(path);
     return { data: result };
   } catch (error) { return { error: message(error) }; }
 }

@@ -56,7 +56,13 @@ async function backend({ signedIn = true, responses = [JSON.stringify(output())]
           })) ?? [];
           const count=data.length;
           if (update) { writes.push({ table, filters, update }); for (const row of data) Object.assign(row, update); }
-          if(deletion){writes.push({table,filters,delete:true});rows[table]=rows[table].filter(row=>!data.includes(row));for(const row of data)votes.delete(`${row.journey_id}:${row.user_id}`);}
+          if(deletion){writes.push({table,filters,delete:true});rows[table]=rows[table].filter(row=>!data.includes(row));for(const row of data)votes.delete(`${row.journey_id}:${row.user_id}`);
+            if(table==='journeys')for(const parent of data){
+              rows.journey_stops=rows.journey_stops.filter(row=>row.journey_id!==parent.id);
+              rows.journey_votes=rows.journey_votes.filter(row=>row.journey_id!==parent.id);
+              rows.generation_runs.forEach(row=>{if(row.journey_id===parent.id)row.journey_id=null;});
+            }
+          }
           if(interval)data=data.slice(interval[0],interval[1]+1);
           return Promise.resolve({ data:head?null:data, count:countRequested?count:null, error: null }).then(resolve, reject);
         },
@@ -328,7 +334,8 @@ test('requested physical-action and neighborhood quality rules appear verbatim i
     '- Vary neighborhoods. Do not default to Lower Manhattan, Times Square, or Midtown.',
     '- If you are not certain of a date, a sequence of events, or a cause and effect, leave it out. A vivid true detail is better than a dramatic uncertain one.',
     '- The place field contains only the place name and its street address or nearest cross streets, written so it can be searched on Google Maps. Put any description in the body, never in the place field.',
-    '- Name a specific business only if it is well known and has operated for many years. For an everyday stop like a grocery, bodega, deli, or coffee cart, write the category and the street instead, for example "Any bodega on 48th Ave, Sunnyside".']) assert.ok(prompt.SYSTEM_PROMPT.includes(sentence));
+    '- Name a specific business only if it is well known and has operated for many years. For an everyday stop like a grocery, bodega, deli, or coffee cart, write the category and the street instead, for example "Any bodega on 48th Ave, Sunnyside".',
+    '- Each image query must match the time of day of that stop. Add "daytime", "sunset", or "night" when it matters.']) assert.ok(prompt.SYSTEM_PROMPT.includes(sentence));
 });
 
 test('migration seeds match the maintained editorial copy and enable RLS without touching tasks', () => {
@@ -348,6 +355,35 @@ test('migration seeds match the maintained editorial copy and enable RLS without
   assert.match(sql, /pg_advisory_xact_lock/); assert.match(sql, /on conflict\(journey_id,user_id\) do update/);
   assert.doesNotMatch(sql, /publish_token|publish_downloads|claim_journey_publish|record_journey_download|finish_journey_publish/);
   assert.match(sql, /public\.publish_journey\(p_user_id uuid,p_journey_id uuid,p_selection jsonb\)/);
+});
+
+test('anonymous deletion never creates a privileged client',async()=>{
+  const b=await backend({signedIn:false});
+  await assert.rejects(b.api.deleteOwnJourney(draftId),/Sign in/);
+  assert.equal(b.writes.length,0);assert.ok(!b.events.includes('privileged'));
+});
+test('other-author and editorial Journey deletion is denied without writes',async()=>{
+  const b=await backend();
+  await assert.rejects(b.api.deleteOwnJourney(otherDraft),/only delete your own/);
+  b.rows.journeys[0].is_editorial=true;
+  await assert.rejects(b.api.deleteOwnJourney(draftId),/only delete your own/);
+  assert.equal(b.writes.length,0);
+});
+test('own draft and published deletion cascades stops/votes but retains generation history',async()=>{
+  for(const status of ['draft','published']) {
+    const b=await backend();b.rows.journeys[0].status=status;
+    b.rows.journey_votes.push({journey_id:draftId,user_id:other,value:'up'});
+    b.rows.generation_runs[0].journey_id=draftId;
+    await b.api.deleteOwnJourney(draftId);
+    assert.ok(!b.rows.journeys.some(row=>row.id===draftId));
+    assert.ok(!b.rows.journey_stops.some(row=>row.journey_id===draftId));
+    assert.ok(!b.rows.journey_votes.some(row=>row.journey_id===draftId));
+    assert.equal(b.rows.generation_runs.length,2);assert.equal(b.rows.generation_runs[0].journey_id,null);
+    assert.deepEqual(b.writes[0].filters,[['id',draftId],['author_id',uid],['is_editorial',false]]);
+  }
+  const sql=fs.readFileSync(path.join(root,'supabase/migrations/202610120001_elsewhere_journeys.sql'),'utf8');
+  for(const table of ['journey_stops','journey_votes'])assert.match(sql,new RegExp(`create table public\\.${table} \\([\\s\\S]*?references public\\.journeys\\(id\\) on delete cascade`));
+  assert.match(sql,/create table public\.generation_runs \([\s\S]*?references public\.journeys\(id\) on delete set null/);
 });
 
 test('vote → cancel → vote deletes only the authenticated user row, even with a forged extra identity',async()=>{
