@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { matchingCsrf } from "../utils/auth-validation.ts";
+import { matchingCsrf, safeReturnPath } from "../utils/auth-validation.ts";
 import { avatarExtension } from "../utils/avatar-validation.ts";
 import { needsNames } from "../utils/profile.ts";
 
@@ -31,4 +31,9 @@ test("one missing or whitespace-only name still requires completion", () => {
   assert.equal(needsNames(profile), false);
   assert.equal(needsNames({ ...profile, first_name: null }), true);
   assert.equal(needsNames({ ...profile, last_name: "  " }), true);
+});
+
+test("Google return paths are local, allowlisted, and cannot become open redirects", () => {
+  for (const path of ["/", "/create", "/profile", "/journeys/11111111-1111-4111-8111-111111111111#vote", "/preview/11111111-1111-4111-8111-111111111111"]) assert.equal(safeReturnPath(path), path);
+  for (const path of ["https://attacker.invalid", "//attacker.invalid", "\\\\attacker.invalid", "/create?next=https://attacker.invalid", "/rate", "/preview/not-an-id", null]) assert.equal(safeReturnPath(path), "/");
 });

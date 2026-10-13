@@ -1,6 +1,7 @@
 "use client";
 
 import Script from "next/script";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
 declare global {
@@ -11,7 +12,7 @@ declare global {
         auto_select: boolean;
       }): void;
       renderButton(element: HTMLElement, options: {
-        type: "standard"; theme: "outline"; size: "large"; text: "signin_with";
+        type: "standard"; theme: "outline"; size: "large"; text: "signin_with"; locale: "en";
       }): void;
     } } };
   }
@@ -22,13 +23,17 @@ export function GoogleSignIn() {
   const [ready, setReady] = useState(false);
   const [error, setError] = useState("");
   const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+  const pathname = usePathname();
+  const search = useSearchParams();
+  const returnTo = search.get("next") ?? pathname;
 
   useEffect(() => {
     if (!ready || !clientId) return;
     let cancelled = false;
+    const controller = new AbortController();
     async function initialize() {
       try {
-        const response = await fetch("/auth/nonce", { cache: "no-store" });
+        const response = await fetch(`/auth/nonce?next=${encodeURIComponent(returnTo)}`, { cache: "no-store", signal: controller.signal });
         if (!response.ok) throw new Error("Login initialization failed.");
         const { nonce } = await response.json();
         if (cancelled || !button.current || !window.google) return;
@@ -36,18 +41,19 @@ export function GoogleSignIn() {
           client_id: clientId!, ux_mode: "redirect",
           login_uri: `${window.location.origin}/auth/callback`, nonce, auto_select: false,
         });
+        button.current.replaceChildren();
         window.google.accounts.id.renderButton(button.current, {
-          type: "standard", theme: "outline", size: "large", text: "signin_with",
+          type: "standard", theme: "outline", size: "large", text: "signin_with", locale: "en",
         });
       } catch { if (!cancelled) setError("Google sign-in could not load. Please refresh and try again."); }
     }
     void initialize();
-    return () => { cancelled = true; };
-  }, [ready, clientId]);
+    return () => { cancelled = true; controller.abort(); };
+  }, [ready, clientId, returnTo]);
 
   if (!clientId) return <p role="alert">Google sign-in is not configured yet.</p>;
   return <>
-    <Script src="https://accounts.google.com/gsi/client" strategy="afterInteractive"
+    <Script src="https://accounts.google.com/gsi/client?hl=en" strategy="afterInteractive"
       onReady={() => setReady(true)} onError={() => setError("Google sign-in could not load. Please refresh and try again.")} />
     <div ref={button} aria-label="Sign in with Google" />
     {!ready && !error && <p>Loading Google sign-in…</p>}

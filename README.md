@@ -1,72 +1,61 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Elsewhere, NYC.
 
-## Getting Started
+**One city. A thousand ways to live it.**
 
-First, run the development server:
+An editorial NYC experience magazine built with Next.js 16.4, React, Supabase, Google Gemini, and Unsplash. Ordinary real places become imaginative journeys, with private generation, preview, publication, and persisted reader votes.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## Product routes
+
+- `/`: public Discover, with editor's picks, reader favorites, and newly published community journeys.
+- `/journeys/[id]`: published journeys, route overview, Maps links, credits, and voting.
+- `/create`: Google-authenticated generation with seven optional starting themes.
+- `/preview/[id]`: author's private draft, photo candidate selection, and explicit publication.
+- `/profile`: existing name/avatar functionality and Your journeys.
+- `/privacy`: account, AI input, image-provider, and voting disclosures.
+- `/rate`: retired caption page; redirects to Discover. Its database tables remain intact.
+
+## Local development
+
+```sh
+npm ci
+npm run dev -- --port 3001
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Port 3001 matches the existing local Google redirect configuration. Configure environment variables privately; names are documented in [the deployment checklist](docs/phase-3/deployment-checklist.md). Never commit `.env.local` or expose server keys with a `NEXT_PUBLIC_` prefix.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Production verification:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
-
-## Week 4: caption rating
-
-`/rate` retains the Week 3 Google sign-in and profile completion gate. Captions
-come from Supabase. Each successful upvote/downvote inserts a new `caption_votes`
-row; repeat votes are separate submissions. No vote history UI is implemented.
-
-The schema and three sample captions are in
-`supabase/migrations/202609280002_caption_rating.sql` (already applied to the
-existing project). It contains no policy or RLS configuration changes. The
-project's existing event trigger automatically enables RLS on new public tables.
-The server-only rating module verifies `auth.getUser()` before privileged access
-and derives the inserted `user_id` exclusively from that authenticated user.
-
-Keep `SUPABASE_SECRET_KEY` server-only and out of Git. The Week 3 environment
-variables are sufficient; no new secrets are needed.
-
-Verification:
-
-```bash
+```sh
 npm run lint
-npm run build
-# If local Turbopack cannot bind its worker port:
+npx next typegen
+npx tsc --noEmit --incremental false
 npm run build -- --webpack
-node --test tests/auth-boundaries.test.mjs
-node --experimental-vm-modules --test tests/rating-boundaries.test.mjs
 npm run start -- --port 3001
-# In a second terminal:
-AUTH_TEST_ORIGIN=http://localhost:3001 node --test tests/public-routes.test.mjs tests/rating-http.test.mjs
+# In another terminal, while the server is running:
+node --experimental-vm-modules --test tests/*.test.mjs
 ```
 
-Negative-path unit tests isolate Auth/database dependencies without extracting
-session credentials. Browser acceptance uses real Google login and database
-votes, with persistence and associations independently checked in Supabase.
-For deployed HTTP tests, supply `RATE_TEST_ACTION_ID` from that deployment's
-client bundle, since action IDs can differ between builds.
+Tests isolate paid generation and database writes. HTTP tests use anonymous requests to the local server. They require the Phase 2 schema and published editorial seeds in the already-configured Supabase project.
+
+## Architecture and boundaries
+
+Server-only data modules validate `auth.getUser()` before private reads or mutations, then use private privileged clients. Public reads filter `published`. Drafts and generation history belong only to their author. New tables have RLS enabled and no direct anon/authenticated grants. The applied Phase 2 migration includes service-role-only transactional quota reservation, draft persistence, index-only publication, and changed-vote upserts. Do not reapply it to production.
+
+Every app generation attempt stores input, prompts, model, and exact raw output. Users receive at most ten attempts per UTC calendar day; the UI displays the reset in New York time. Requests share a 60-second deadline. Long image queries are truncated to six words; empty photo searches broaden once. Publication saves candidate selections transactionally, then sends best-effort Unsplash tracking.
+
+Fonts are self-hosted by Next.js: Geist for readable body text and Newsreader for editorial titles. Photos retain Unsplash's returned hotlink URLs and photographer attribution. Missing images use typographic placeholders.
+
+## Acceptance and deployment
+
+- [Manual Google-authenticated acceptance](docs/phase-3/manual-acceptance.md)
+- [Deployment preparation](docs/phase-3/deployment-checklist.md)
+- [Phase 2 backend report](docs/phase-2-backend.md)
+- [Exact Phase 3 quality outputs](docs/phase-3/quality/)
+
+Phase 3 quality verification is a separate explicit script. It saves local records and never accesses Supabase. Running it incurs real model calls; it refuses to repeat existing cases automatically.
+
+```sh
+node --experimental-vm-modules scripts/phase3-quality.mjs --run-live
+```
+
+The two requested cases have already run. Do not rerun them as part of normal tests. Actual generate/publish/vote/profile-save flows are left for user-led manual acceptance because they mutate the sole live project. Production deployment accessibility and real-place feasibility must be checked separately from passing local tests.

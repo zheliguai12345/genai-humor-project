@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
 import { getCurrentProfile } from "@/utils/supabase/profile";
 import { needsNames } from "@/utils/profile";
-import { LOGIN_NONCE_COOKIE, matchingCsrf } from "@/utils/auth-validation";
+import { LOGIN_NONCE_COOKIE, LOGIN_RETURN_COOKIE, matchingCsrf, safeReturnPath } from "@/utils/auth-validation";
 
 function redirect(request: NextRequest, path: string) {
   const response = NextResponse.redirect(new URL(path, request.url), 303);
@@ -11,6 +11,7 @@ function redirect(request: NextRequest, path: string) {
   response.cookies.set(LOGIN_NONCE_COOKIE, "", {
     httpOnly: true, secure: true, sameSite: "none", path: "/auth/callback", maxAge: 0,
   });
+  response.cookies.set(LOGIN_RETURN_COOKIE, "", { httpOnly: true, secure: true, sameSite: "none", path: "/auth/callback", maxAge: 0 });
   return response;
 }
 
@@ -37,7 +38,8 @@ export async function POST(request: NextRequest) {
   if (error) return redirect(request, "/?error=google-sign-in");
   const current = await getCurrentProfile();
   if (!current) return redirect(request, "/?error=google-sign-in");
-  return redirect(request, needsNames(current.profile) ? "/profile" : "/rate");
+  const returnTo = safeReturnPath(cookieStore.get(LOGIN_RETURN_COOKIE)?.value);
+  return redirect(request, returnTo !== "/" ? returnTo : needsNames(current.profile) ? "/profile" : "/");
 }
 
 export async function GET(request: NextRequest) {

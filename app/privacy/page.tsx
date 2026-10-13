@@ -1,24 +1,12 @@
 import Link from "next/link";
-
+import type { Metadata } from "next";
+export const metadata: Metadata = { title: "Privacy" };
 export default function PrivacyPage() {
-  return <main>
-    <Link href="/">← The Humor Project</Link>
-    <h1>Privacy</h1>
-    <p>This is a classroom project for Designing for GenAI: The Humor Project.</p>
-    <h2>Sign-in and profile information</h2>
-    <p>Google verifies your identity. Supabase Auth receives your basic Google account information,
-      including your account identifier, email, name, and profile photo reference. We use this
-      information to create your account and keep you signed in with session cookies.</p>
-    <p>The first and last names you enter are stored in your profile. Uploaded photos are stored
-      as files in private Supabase Storage, with a file path stored in your profile. Temporary
-      signed links let your browser display your photo.</p>
-    <h2>Services that process this information</h2>
-    <p>Google handles sign-in, Supabase stores account and profile information and photo files,
-      and Vercel hosts the app and processes profile updates. These services may keep operational
-      logs. This app requests only basic sign-in information from Google.</p>
-    <h2>Your choices</h2>
-    <p>You can edit your names and replace your photo in Profile, and sign out at any time.
-      Account data remains stored after sign-out. For questions or an account/data deletion
-      request, contact <a href="mailto:zheliguai12345@gmail.com">zheliguai12345@gmail.com</a>.</p>
+  return <main id="main-content" className="simple-page"><Link className="back-link" href="/">← Back to Discover</Link><p className="section-label">A note on trust</p><h1>Privacy &amp; your data</h1><p>Elsewhere, NYC. is a student project for Columbia University&apos;s Designing for GenAI course.</p>
+    <h2>Sign-in and your profile</h2><p>Google verifies your identity. Supabase Auth receives your basic Google account information, including your account identifier, email, name, and profile photo reference. We use this to create your account and keep you signed in with session cookies.</p><p>The names you enter are stored in your profile. Uploaded profile photos are kept in private Supabase Storage. Temporary signed links let your browser display them.</p>
+    <h2>Your ideas and Google Gemini</h2><p>When you generate a journey, your time, budget, interests, and optional wild idea are sent to Google Gemini for processing. We store your input, the prompts, the configured model, its response, and the generation result in Supabase.</p><p>Your generation history and drafts are private to your account. Publishing makes the journey&apos;s text and photographs public. The stored prompts and generation history remain private, including after publication. Avoid putting sensitive personal information in your wild idea.</p>
+    <h2>Photographs and Unsplash</h2><p>Journey photographs come from Unsplash. We send image search phrases derived from a journey to its API. Your browser loads photographs directly from Unsplash&apos;s image service, which receives ordinary network information such as your IP address. Photographer credits link to Unsplash.</p><p>When you publish a journey, the server sends a download-tracking request for the photographs you selected. Browsing a journey does not trigger new photo searches.</p>
+    <h2>Votes and service providers</h2><p>Votes are stored with your account ID and the journey ID. Public pages show vote totals. They do not display voter account details.</p><p>Google handles sign-in and AI generation. Supabase stores accounts, profiles, journeys, generation history, and votes. Vercel hosts the app. These providers may keep operational logs. The app requests only basic Google sign-in information.</p>
+    <h2>Your choices</h2><p>You can edit your profile, replace your profile photo, choose whether to publish a draft, change your votes, and sign out. Stored data remains after sign-out. For questions or an account/data deletion request, contact <a href="mailto:zheliguai12345@gmail.com">zheliguai12345@gmail.com</a>.</p>
   </main>;
 }

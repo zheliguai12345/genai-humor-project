@@ -25,3 +25,9 @@ export async function createClient() {
     },
   );
 }
+
+export async function getOptionalUser() {
+  const client = await createClient();
+  const { data: { user }, error } = await client.auth.getUser();
+  return error ? null : user;
+}

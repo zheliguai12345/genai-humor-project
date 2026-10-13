@@ -14,7 +14,7 @@ export function ProfileForm({ profile }: { profile: Profile }) {
     <label htmlFor="avatar">Profile photo</label>
     <input id="avatar" name="avatar" type="file" accept="image/jpeg,image/png,image/webp" />
     <p className="hint">JPEG, PNG, or WebP, up to 2 MB. Leave blank to keep your current photo.</p>
-    <button type="submit" disabled={pending}>{pending ? "Saving…" : "Save profile"}</button>
+    <button type="submit" className="button" disabled={pending}>{pending ? "Saving…" : "Save profile"}</button>
     {state.error && <p role="alert">{state.error}</p>}
     {state.saved && <p role="status">Profile saved.</p>}
   </form>;

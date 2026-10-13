@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist, Newsreader } from "next/font/google";
+import Link from "next/link";
+import { SiteHeader } from "./components/site-header";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -7,23 +9,23 @@ const geistSans = Geist({
   subsets: ["latin"],
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+const editorial = Newsreader({ variable: "--font-editorial", subsets: ["latin"], display: "swap" });
 
 export const metadata: Metadata = {
-  title: "The Humor Project",
-  description: "Your profile and a home for captions worth a second look.",
+  title: { default: "Elsewhere, NYC.", template: "%s | Elsewhere, NYC." },
+  description: "One city. A thousand ways to live it. Imaginative journeys through real New York places.",
+  applicationName: "Elsewhere, NYC.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${editorial.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body><a className="skip-link" href="#main-content">Skip to content</a><SiteHeader />{children}
+        <footer className="site-footer"><div><Link className="footer-brand" href="/">Elsewhere, NYC.</Link><p>One city. A thousand ways to live it.</p></div><Link href="/privacy">Privacy &amp; your data</Link><span>Made for a day outside.</span></footer>
+      </body>
     </html>
   );
 }
