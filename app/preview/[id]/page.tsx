@@ -5,7 +5,7 @@ import { getOwnDraft } from "@/utils/supabase/journeys";
 import { JourneyAuthError, JourneyInputError } from "@/utils/journeys/validation";
 import { PreviewEditor } from "./preview-editor";
 export const metadata: Metadata = { title: "Preview your journey", robots: { index: false, follow: false } };
-export const maxDuration = 60;
+export const maxDuration = 120;
 export default async function PreviewPage({ params }: PageProps<"/preview/[id]">) {
   const { id } = await params;
   if (!await getOptionalUser()) redirect(`/?signin=preview&next=${encodeURIComponent(`/preview/${id}`)}`);

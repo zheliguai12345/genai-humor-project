@@ -1,0 +1,70 @@
+{
+  "source": "Actual production-build server logs during Google-authenticated browser acceptance",
+  "diagnostic": {
+    "gemini_ms": 1370,
+    "status": "failed",
+    "validation": "not reached",
+    "photos": "not reached"
+  },
+  "verification": {
+    "trace_id": "8db73854-6748-4f75-90e6-d63af0d3e24e",
+    "input": {
+      "time": "afternoon",
+      "budget": "under $25",
+      "vibes": [],
+      "wild_idea": "An Alien's First Day on Earth — Explain humanity through New York."
+    },
+    "events": [
+      {
+        "stage": "gemini_request",
+        "attempt": 1,
+        "duration_ms": 468,
+        "elapsed_ms": 662,
+        "model": "gemini-3.8-flash",
+        "provider_attempt": 1,
+        "outcome": "error",
+        "status": 503
+      },
+      {
+        "stage": "gemini_request",
+        "attempt": 1,
+        "duration_ms": 3398,
+        "elapsed_ms": 6064,
+        "model": "gemini-3.8-flash",
+        "provider_attempt": 2,
+        "outcome": "error",
+        "status": 503
+      },
+      {
+        "stage": "gemini_request",
+        "attempt": 1,
+        "duration_ms": 529,
+        "elapsed_ms": 6594,
+        "model": "gemini-3.5-flash-lite",
+        "provider_attempt": 3,
+        "outcome": "error",
+        "status": 503
+      },
+      {
+        "stage": "gemini",
+        "attempt": 1,
+        "duration_ms": 6407,
+        "elapsed_ms": 6594,
+        "outcome": "error"
+      },
+      {
+        "stage": "total",
+        "attempt": 1,
+        "duration_ms": 6783,
+        "elapsed_ms": 6783,
+        "outcome": "error"
+      }
+    ],
+    "quota_before": 4,
+    "quota_after": 3,
+    "validation": "not reached",
+    "unsplash_searches": [],
+    "draft_save": "not reached",
+    "result": "Both primary and fallback returned 503; no Journey created."
+  }
+}

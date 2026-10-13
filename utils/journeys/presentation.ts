@@ -1,7 +1,7 @@
 import type { Journey } from "./types";
 
 export type VoteCounts = { up: number; down: number };
-export type JourneySummary = Omit<Journey, "stops">;
+export type JourneySummary = Omit<Journey, "stops"> & { stop_count?: number };
 export type GenerationQuota = { used: number; remaining: number; resets_at: string };
 
 export function mapsUrl(place: string) {
@@ -32,4 +32,16 @@ export function durationLabel(journey: Pick<Journey, "when_label" | "mode">) {
   if (total > 24 * 60) return journey.when_label;
   const hours = Math.floor(total / 60), remainder = total % 60;
   return `${hours ? `${hours} hr` : ""}${hours && remainder ? " " : ""}${remainder ? `${remainder} min` : ""}`;
+}
+
+export function stopCount(journey: Pick<Journey, "mode"> & { stop_count?: number; stops?: unknown[] }) {
+  return journey.stops?.length ?? journey.stop_count ?? Number(journey.mode.match(/(\d+) stops?/)?.[1] ?? 0);
+}
+export type VoteState = { selected: "up" | "down" | null; counts: VoteCounts };
+export function optimisticVote(state: VoteState, direction: "up" | "down"): VoteState {
+  const selected = state.selected === direction ? null : direction;
+  const counts = { ...state.counts };
+  if (state.selected) counts[state.selected]--;
+  if (selected) counts[selected]++;
+  return { selected, counts };
 }

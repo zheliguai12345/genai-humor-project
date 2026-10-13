@@ -24,7 +24,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${geistSans.variable} ${editorial.variable} h-full antialiased`}
     >
       <body><a className="skip-link" href="#main-content">Skip to content</a><SiteHeader />{children}
-        <footer className="site-footer"><div><Link className="footer-brand" href="/">Elsewhere, NYC.</Link><p>One city. A thousand ways to live it.</p></div><Link href="/privacy">Privacy &amp; your data</Link><span>Made for a day outside.</span></footer>
+        <footer className="site-footer"><Link className="footer-brand" href="/">Elsewhere, NYC.</Link><Link href="/privacy">Privacy &amp; your data</Link></footer>
       </body>
     </html>
   );

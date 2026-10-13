@@ -26,6 +26,7 @@ export async function publishJourney(id: string, selections: unknown) {
 export async function vote(id: string, value: unknown) {
   try {
     const result = await voteOnJourney(id, value);
+    revalidatePath("/");
     revalidatePath(`/journeys/${id}`);
     return { data: result };
   } catch (error) { return { error: message(error) }; }

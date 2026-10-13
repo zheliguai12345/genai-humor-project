@@ -33,7 +33,7 @@ test('public editorial detail and privacy render; existing private drafts stay i
   const detail=await fetch(origin+'/journeys/e15e0000-0000-4000-8000-000000000001');
   assert.equal(detail.status,200);
   const html=await detail.text();
-  assert.match(html,/The Museum That Doesn/);assert.match(html,/Open in Maps/);assert.match(html,/Would you actually spend a day like this/);
+  assert.match(html,/The Museum That Doesn/);assert.match(html,/>Maps/);assert.match(html,/Upvote/);assert.doesNotMatch(html,/Would you actually spend a day like this|The route, at a glance/);
   assert.equal((await fetch(origin+'/privacy')).status,200);
   for(const path of ['/journeys/823d4b05-9fd0-4fc2-8adc-32f61adade00','/api/journeys/823d4b05-9fd0-4fc2-8adc-32f61adade00'])assert.equal((await fetch(origin+path)).status,404);
 });
@@ -48,4 +48,9 @@ test('direct anonymous Journey vote action is denied and cross-origin actions ar
   assert.equal(denied.status,200);assert.match(await denied.text(),/Sign in to continue/);
   const cross=await fetch(url,{method:'POST',headers:{'Next-Action':action,Origin:'https://untrusted.example','Content-Type':'text/plain;charset=UTF-8'},body});
   assert.ok(cross.status>=400);
+});
+
+test('anonymous streaming generation is denied before quota, model, or private progress',async()=>{
+  const response=await fetch(origin+'/api/journeys',{method:'POST',headers:{Origin:origin,'Content-Type':'application/json',Accept:'application/x-ndjson'},body:JSON.stringify(input)});
+  assert.equal(response.status,401);assert.deepEqual(await response.json(),{error:'Sign in to continue.'});
 });

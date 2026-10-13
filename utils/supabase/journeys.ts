@@ -2,11 +2,12 @@ import "server-only";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "./server";
 import { configuredModel, generateJourneyText } from "../ai/gemini";
+import { generationTelemetry } from "../ai/generation-telemetry";
 import { SYSTEM_PROMPT, generationPrompt } from "../ai/journey-prompt";
 import { searchJourneyImages, trackPublishedPhoto } from "../ai/unsplash";
 import { JourneyAccessError, JourneyAuthError, JourneyInputError, JourneyOutputError, JourneyServiceError,
   validateId, validateInput, validateOutput, validateSelections } from "../journeys/validation";
-import type { GenerationRun, Journey, JourneyStop } from "../journeys/types";
+import type { GenerationRun, Journey, JourneyStop, GenerationProgress } from "../journeys/types";
 import { quotaWindow, resetLabel, type GenerationQuota, type JourneySummary, type VoteCounts } from "../journeys/presentation";
 
 // Never export a general privileged client. Public reads have a fixed published filter;
@@ -102,64 +103,85 @@ export async function getJourneyVoteCounts(id: string): Promise<VoteCounts> {
   return { up: results[0].count!, down: results[1].count! };
 }
 
-export async function getDiscoverJourneys() {
+export async function getOwnJourneyVotes(ids: string[]): Promise<Record<string, "up" | "down">> {
+  const user = await requireUser();
+  if (!ids.length) return {};
+  if (ids.length > 50) throw new JourneyInputError("Choose fewer journeys.");
+  ids.forEach(validateId);
+  const { data, error } = await journeyClient().from("journey_votes").select("journey_id,value")
+    .eq("user_id", user.id).in("journey_id", ids);
+  if (error) throw new JourneyServiceError("Unable to load your votes.");
+  return Object.fromEntries(data.map(row => [row.journey_id, row.value]));
+}
+
+export async function getDiscoverJourneys(sort: "top" | "new" = "top") {
   const client = journeyClient();
   const counts: Record<string, VoteCounts> = {};
-  const votedIds = new Set<string>();
-  // Page through votes so rankings are not silently limited by PostgREST's row cap.
   for (let offset = 0; ; offset += 500) {
     const { data, error } = await client.from("journey_votes")
       .select("journey_id,value,journeys!inner(status)").eq("journeys.status", "published")
       .order("journey_id").order("user_id").range(offset, offset + 499);
-    if (error) throw new JourneyServiceError("Unable to load community favorites.");
+    if (error) throw new JourneyServiceError("Unable to load journey scores.");
     for (const row of data) {
       const count = counts[row.journey_id] ??= { up: 0, down: 0 };
       if (row.value === "up") count.up++; else if (row.value === "down") count.down++;
-      votedIds.add(row.journey_id);
     }
     if (data.length < 500) break;
   }
-  const favoriteIds = [...votedIds].filter(id => counts[id].up > 0)
-    .sort((a, b) => counts[b].up - counts[a].up || a.localeCompare(b)).slice(0, 6);
-  const [editorial, latest, favorites] = await Promise.all([
-    client.from("journeys").select(JOURNEY_FIELDS).eq("status", "published").eq("is_editorial", true).order("published_at", { ascending: false }).limit(12),
-    client.from("journeys").select(JOURNEY_FIELDS).eq("status", "published").eq("is_editorial", false).order("published_at", { ascending: false }).limit(8),
-    favoriteIds.length ? client.from("journeys").select(JOURNEY_FIELDS).eq("status", "published").in("id", favoriteIds)
-      : Promise.resolve({ data: [], error: null }),
-  ]);
-  if ([editorial, latest, favorites].some(r => r.error)) throw new JourneyServiceError("Unable to load published journeys.");
-  const ranked = (favorites.data as JourneySummary[]).sort((a, b) => favoriteIds.indexOf(a.id) - favoriteIds.indexOf(b.id));
-  return { editorial: editorial.data as JourneySummary[], latest: latest.data as JourneySummary[], favorites: ranked, counts };
+  const published: JourneySummary[] = [];
+  // Rank the complete published set, rather than only the most recent API page.
+  for (let offset = 0; ; offset += 500) {
+    const { data, error } = await client.from("journeys").select(`${JOURNEY_FIELDS},journey_stops(count)`)
+      .eq("status", "published").order("published_at", { ascending: false }).order("id").range(offset, offset + 499);
+    if (error) throw new JourneyServiceError("Unable to load published journeys.");
+    for (const { journey_stops, ...journey } of data) published.push({ ...journey, stop_count: journey_stops?.[0]?.count ?? 0 } as JourneySummary);
+    if (data.length < 500) break;
+  }
+  const score = (id: string) => (counts[id]?.up ?? 0) - (counts[id]?.down ?? 0);
+  published.sort((a, b) => (sort === "top" ? score(b.id) - score(a.id) : 0)
+    || (b.published_at ?? "").localeCompare(a.published_at ?? "") || a.id.localeCompare(b.id));
+  return { journeys: published.slice(0, 50), counts };
 }
 
-export async function generateJourney(inputValue: unknown): Promise<{ journey_id: string; generation_run_id: string }> {
+export async function generateJourney(inputValue: unknown, progress?: (event: GenerationProgress) => void, requestSignal?: AbortSignal) {
   const user = await requireUser();
   const input = validateInput(inputValue);
   const model = configuredModel();
   const client = journeyClient();
-  const signal = AbortSignal.timeout(60_000);
+  const signal = AbortSignal.any([AbortSignal.timeout(90_000), ...(requestSignal ? [requestSignal] : [])]);
+  const telemetry = generationTelemetry();
   let correction: string | undefined;
+  let actualModel = model;
+  const validation_history: { user_prompt: string; raw_output: string | null; model: string; error: string }[] = [];
+  const { data: runId, error: reserveError } = await client.rpc("reserve_journey_generation", {
+    p_user_id: user.id, p_input: input, p_system_prompt: SYSTEM_PROMPT, p_user_prompt: generationPrompt(input), p_model: model,
+  }).abortSignal(signal);
+  if (reserveError || !runId) {
+    if (reserveError?.message?.includes("daily_generation_limit")) throw new JourneyInputError(`You've reached today's 10-generation limit. 0 attempts remain. Resets ${resetLabel(quotaWindow().resets_at)} New York time.`);
+    throw new JourneyServiceError("Unable to record this generation. Please try again.");
+  }
   for (let attempt = 0; attempt < 2; attempt++) {
     signal.throwIfAborted();
     const userPrompt = generationPrompt(input, correction);
-    const { data: runId, error: reserveError } = await client.rpc("reserve_journey_generation", {
-      p_user_id: user.id, p_input: input, p_system_prompt: SYSTEM_PROMPT, p_user_prompt: userPrompt, p_model: model,
-    }).abortSignal(signal);
-    if (reserveError || !runId) {
-      if (reserveError?.message?.includes("daily_generation_limit")) throw new JourneyInputError(`You've reached today's 10-generation limit. 0 attempts remain. Resets ${resetLabel(quotaWindow().resets_at)} New York time.`);
-      throw new JourneyServiceError("Unable to record this generation. Please try again.");
-    }
     let raw: string | null = null;
     try {
-      raw = await generateJourneyText(SYSTEM_PROMPT, userPrompt, model, signal);
+      progress?.({ stage: "model", attempt: attempt + 1 });
+      raw = await telemetry.measure("gemini", attempt + 1, () => generateJourneyText(SYSTEM_PROMPT, userPrompt, model, signal, {
+        onModelUsed: used => { actualModel = used; },
+        onProgress: stage => progress?.({ stage, attempt: attempt + 1 }),
+        onTiming: timing => telemetry.record("gemini_request", attempt + 1, timing.duration_ms, timing),
+      }));
       // Keep the exact model response even when parsing, image search, or draft persistence fails.
-      const { error: rawError } = await client.from("generation_runs").update({ raw_output: raw })
+      const { error: rawError } = await client.from("generation_runs").update({ raw_output: raw, model: actualModel, user_prompt: userPrompt, input: validation_history.length ? { ...input, validation_history } : input })
         .eq("id", runId).eq("user_id", user.id).abortSignal(signal);
       if (rawError) throw new JourneyServiceError("Unable to record the generated response.");
-      const generated = validateOutput(raw);
+      progress?.({ stage: "validation", attempt: attempt + 1 });
+      const generated = await telemetry.measure("validation", attempt + 1, () => validateOutput(raw!));
       const queries = [generated.cover_image_query, ...generated.stops.map(s => s.image_query)];
       const uniqueQueries = [...new Set(queries)];
-      const images = new Map(await Promise.all(uniqueQueries.map(async query => [query, await searchJourneyImages(query, signal)] as const)));
+      progress?.({ stage: "photos", attempt: attempt + 1 });
+      const images = new Map(await telemetry.measure("photos", attempt + 1, () => Promise.all(uniqueQueries.map(async (query, query_index) => [query, await searchJourneyImages(query, signal,
+        timing => telemetry.record("unsplash", attempt + 1, timing.duration_ms, { ...timing, query_index }))] as const))));
       signal.throwIfAborted();
       const { cover_image_query, stops: generatedStops, ...copy } = generated;
       const journey = { ...copy, cover_image: images.get(cover_image_query) ?? null,
@@ -167,23 +189,26 @@ export async function generateJourney(inputValue: unknown): Promise<{ journey_id
           const { image_query, ...stop } = s;
           return { ...stop, image: images.get(image_query) ?? null };
         }) };
-      const { data: journeyId, error: saveError } = await client.rpc("save_generated_journey", {
+      progress?.({ stage: "saving", attempt: attempt + 1 });
+      const { data: journeyId, error: saveError } = await telemetry.measure("draft_save", attempt + 1, async () => await client.rpc("save_generated_journey", {
         p_user_id: user.id, p_run_id: runId, p_journey: journey,
-      }).abortSignal(signal);
-      if (saveError || !journeyId) throw new JourneyServiceError("Unable to save this draft. Please try again.");
-      return { journey_id: journeyId, generation_run_id: runId };
+      }).abortSignal(signal));
+      if (saveError || !journeyId) throw new JourneyServiceError("We couldn't confirm the save. Check Your journeys before trying again.");
+      telemetry.record("total", attempt + 1, telemetry.result().total_ms, { outcome: "success" });
+      return { journey_id: journeyId, generation_run_id: runId, timing: telemetry.result() };
     } catch (error) {
       const validationFailure = error instanceof JourneyOutputError;
       const message = validationFailure ? error.message : signal.aborted
-        ? "Generation timed out. Please try again." : "We couldn't complete this journey. Please try again.";
-      if (signal.aborted) throw new JourneyServiceError("Generation timed out. Please try again.");
+        ? "Generation timed out. Please try again." : error instanceof JourneyServiceError ? error.message : "We couldn't complete this journey. Please try again.";
+      if (signal.aborted) { telemetry.record("total", attempt + 1, telemetry.result().total_ms, { outcome: "timeout" }); throw new JourneyServiceError("Generation timed out. Please try again."); }
       // A committed save can lose its network response. Never overwrite its successful audit row.
       // The reservation already records interruption if this bounded cleanup request also fails.
-      const { error: logError } = await client.from("generation_runs").update({ status: "failed", raw_output: raw, error: message })
+      const { error: logError } = await client.from("generation_runs").update({ status: "failed", raw_output: raw, error: message, model: actualModel, user_prompt: userPrompt, input: validation_history.length ? { ...input, validation_history } : input })
         .eq("id", runId).eq("user_id", user.id).eq("status", "failed")
         .abortSignal(AbortSignal.any([signal, AbortSignal.timeout(5_000)]));
       if (logError) throw new JourneyServiceError(signal.aborted ? "Generation timed out. Please try again." : "Unable to record the generation result.");
-      if (validationFailure && attempt === 0 && !signal.aborted) { correction = message; continue; }
+      if (validationFailure && attempt === 0 && !signal.aborted) { validation_history.push({ user_prompt: userPrompt, raw_output: raw, model: actualModel, error: message }); telemetry.record("validation_retry", attempt + 1, 0, { outcome: "scheduled" }); progress?.({ stage: "retry", attempt: attempt + 2 }); correction = message; continue; }
+      telemetry.record("total", attempt + 1, telemetry.result().total_ms, { outcome: "error" });
       throw new JourneyServiceError(validationFailure ? "The journey didn't come together. Please try a different idea." : message);
     }
   }
@@ -225,8 +250,17 @@ export async function publishJourney(id: string, selectionValue: unknown) {
 export async function voteOnJourney(id: string, value: unknown) {
   const user = await requireUser();
   validateId(id);
-  if (value !== "up" && value !== "down") throw new JourneyInputError("Choose I'd do this or Not my vibe.");
-  const { error } = await journeyClient().rpc("vote_on_journey", { p_user_id: user.id, p_journey_id: id, p_value: value });
+  if (value !== "up" && value !== "down" && value !== null) throw new JourneyInputError("Choose an up or down vote.");
+  const client = journeyClient();
+  if (value === null) {
+    const { data: published, error: readError } = await client.from("journeys").select("id").eq("id", id).eq("status", "published").maybeSingle();
+    if (readError) throw new JourneyServiceError("Unable to cancel your vote. Please try again.");
+    if (!published) throw new JourneyAccessError("This published journey is not available.");
+    const { error } = await client.from("journey_votes").delete().eq("journey_id", id).eq("user_id", user.id);
+    if (error) throw new JourneyServiceError("Unable to cancel your vote. Please try again.");
+    return { value: null };
+  }
+  const { error } = await client.rpc("vote_on_journey", { p_user_id: user.id, p_journey_id: id, p_value: value });
   if (error) {
     if (error.message?.includes("published_journey_not_found")) throw new JourneyAccessError("This published journey is not available.");
     throw new JourneyServiceError("Unable to save your vote. Please try again.");

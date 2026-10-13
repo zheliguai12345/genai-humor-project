@@ -23,31 +23,37 @@ function photo(value: unknown): PhotoCandidate | null {
   return { url: p.urls.regular, photographer_name: p.user.name, photographer_username: p.user.username,
     download_location: p.links.download_location };
 }
-export async function searchJourneyImages(query: string, signal: AbortSignal): Promise<JourneyImage | null> {
+type SearchTiming = { search: string; duration_ms: number; outcome: string };
+export async function searchJourneyImages(query: string, signal: AbortSignal, report?: (timing: SearchTiming) => void): Promise<JourneyImage | null> {
   const key = accessKey();
-  const initial = await search(query, key, signal);
+  const initial = await search(query, key, signal, "initial", report);
   if (initial === undefined || initial) return initial ?? null;
   signal.throwIfAborted();
   const broader = `${query.trim().split(/\s+/).slice(-3).join(" ")} New York`;
-  return await search(broader, key, signal) ?? null;
+  return await search(broader, key, signal, "broader", report) ?? null;
 }
-async function search(query: string, key: string, signal: AbortSignal): Promise<JourneyImage | null | undefined> {
+async function search(query: string, key: string, signal: AbortSignal, search: string, report?: (timing: SearchTiming) => void): Promise<JourneyImage | null | undefined> {
+  const started = Date.now();
+  const requestSignal = AbortSignal.any([signal, AbortSignal.timeout(2_000)]);
+  let outcome = "error";
   const url = new URL("https://api.unsplash.com/search/photos");
   url.searchParams.set("query", query);
   url.searchParams.set("per_page", "3");
   url.searchParams.set("content_filter", "high");
   try {
     const response = await fetch(url, { headers: { Authorization: `Client-ID ${key}`, "Accept-Version": "v1" },
-      cache: "no-store", redirect: "error", signal: AbortSignal.any([signal, AbortSignal.timeout(10_000)]) });
+      cache: "no-store", redirect: "error", signal: requestSignal });
     // Retry only an empty successful search, not a rate-limit or provider failure.
     if (!response.ok) return undefined;
     const data: { results?: unknown[] } = await response.json();
     const candidates = (data.results ?? []).slice(0, 3).map(photo).filter((p): p is PhotoCandidate => p !== null);
+    outcome = candidates.length ? "found" : "empty";
     return candidates.length ? { ...candidates[0], candidates } : null;
   } catch {
     // Missing/error photos become placeholders; provider errors and credentials are never logged.
+    outcome = requestSignal.aborted ? "timeout" : "error";
     return undefined;
-  }
+  } finally { report?.({ search, duration_ms: Date.now() - started, outcome }); }
 }
 export async function trackPublishedPhoto(downloadLocation: string) {
   if (!validDownloadLocation(downloadLocation)) throw new JourneyServiceError("This photo cannot be tracked for publication.");

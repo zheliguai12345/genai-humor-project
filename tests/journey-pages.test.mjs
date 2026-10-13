@@ -53,6 +53,6 @@ test('published Journey pages render for anonymous readers without a private vot
   const d=dependencies({published:true});
   const page=await moduleLoader('app/journeys/[id]/page.tsx',d.deps);
   const rendered=await page.default({params:Promise.resolve({id})});
-  assert.equal(rendered.props.children[1].props.authenticated,false);
+  assert.equal(rendered.props.children.props.voting.authenticated,false);
   assert.deepEqual(d.events,[]);
 });

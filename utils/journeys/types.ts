@@ -38,3 +38,4 @@ export type GenerationRun = {
   status: "success" | "failed"; error: string | null; journey_id: string | null; created_at: string;
 };
 export type ImageSelection = { position: number; candidate_index: number | null };
+export type GenerationProgress = { stage: "model" | "validation" | "retry" | "provider_retry" | "fallback" | "photos" | "saving"; attempt: number };

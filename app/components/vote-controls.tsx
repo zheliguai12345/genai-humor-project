@@ -2,38 +2,47 @@
 import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { vote } from "@/app/journey-actions";
-import type { VoteCounts } from "@/utils/journeys/presentation";
+import { optimisticVote, type VoteCounts, type VoteState } from "@/utils/journeys/presentation";
 
 export function VoteControls({ journeyId, authenticated, currentVote, counts }: {
   journeyId: string; authenticated: boolean; currentVote: "up" | "down" | null; counts: VoteCounts;
 }) {
-  const [selected, setSelected] = useState(currentVote);
+  const incoming = `${currentVote}:${counts.up}:${counts.down}`;
+  const [source, setSource] = useState(incoming);
+  const [state, setState] = useState<VoteState>({ selected: currentVote, counts });
   const [message, setMessage] = useState("");
+  const [signin, setSignin] = useState(false);
   const [pending, startTransition] = useTransition();
   const locked = useRef(false);
   const router = useRouter();
-  function choose(value: "up" | "down") {
-    if (!authenticated) {
-      setMessage("Sign in with Google above to add your vote. Your opinion is welcome here.");
-      document.getElementById("sign-in")?.focus();
-      document.getElementById("sign-in")?.scrollIntoView({ behavior: "smooth", block: "center" });
-      return;
-    }
+  if (source !== incoming && !pending) {
+    setSource(incoming); setState({ selected: currentVote, counts });
+  }
+  function choose(direction: "up" | "down") {
+    if (!authenticated) { setSignin(true); return; }
     if (locked.current) return;
-    locked.current = true;
+    locked.current = true; setMessage("");
+    const before = state;
+    const after = optimisticVote(before, direction);
+    setState(after);
     startTransition(async () => {
       try {
-        const result = await vote(journeyId, value);
-        if (result.error) setMessage(result.error);
-        else { setSelected(value); setMessage("Your vote is saved. You can change it whenever you like."); router.refresh(); }
-      } catch { setMessage("We couldn't save your vote. Please try again."); }
+        const result = await vote(journeyId, after.selected);
+        if (result.error) { setState(before); setMessage(result.error); }
+        else router.refresh();
+      } catch { setState(before); setMessage("Vote not saved. Please try again."); }
       finally { locked.current = false; }
     });
   }
-  return <section id="vote" className="vote-panel" aria-labelledby="vote-title"><p className="section-label">The real-world test</p><h2 id="vote-title">Would you actually spend a day like this?</h2>
-    <div className="vote-controls"><button type="button" className={selected === "up" ? "vote-option selected" : "vote-option"} aria-pressed={selected === "up"} disabled={pending} onClick={() => choose("up")}><span>I&apos;d do this</span><span>{counts.up}</span></button>
-      <button type="button" className={selected === "down" ? "vote-option selected" : "vote-option"} aria-pressed={selected === "down"} disabled={pending} onClick={() => choose("down")}><span>Not my vibe</span><span>{counts.down}</span></button></div>
-    <p className="hint">{authenticated ? "One vote per journey. A change of heart is allowed." : "You can read every journey without an account. Sign in to vote."}</p>
-    <p role="status" aria-live="polite" className="action-status">{pending ? "Saving your vote…" : message}</p>
-  </section>;
+  function focusLogin() {
+    const target = document.getElementById("sign-in");
+    target?.focus(); target?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }
+  return <div className="vote-widget" aria-label="Journey voting">
+    <div className="vote-controls"><button type="button" className="vote-arrow" aria-label={state.selected === "up" ? "Cancel upvote" : "Upvote"} title="I'd do this" aria-pressed={state.selected === "up"} disabled={pending} onClick={() => choose("up")}><span aria-hidden="true">▲</span></button>
+      <span className="vote-score" aria-label="Journey score" aria-live="polite">{state.counts.up - state.counts.down}</span>
+      <button type="button" className="vote-arrow" aria-label={state.selected === "down" ? "Cancel downvote" : "Downvote"} title="Not my vibe" aria-pressed={state.selected === "down"} disabled={pending} onClick={() => choose("down")}><span aria-hidden="true">▼</span></button></div>
+    {signin && <div className="vote-signin" role="status"><span>Sign in to vote.</span><button type="button" onClick={focusLogin}>Google sign-in ↑</button><button className="dismiss-button" type="button" aria-label="Dismiss sign-in message" onClick={() => setSignin(false)}>×</button></div>}
+    {message && <p className="vote-error" role="alert">{message}</p>}
+  </div>;
 }

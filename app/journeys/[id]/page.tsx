@@ -5,7 +5,6 @@ import { getPublishedJourney, getJourneyVoteCounts, getOwnJourneyVote } from "@/
 import { getOptionalUser } from "@/utils/supabase/server";
 import { JourneyInputError } from "@/utils/journeys/validation";
 import { JourneyArticle } from "@/app/components/journey-article";
-import { VoteControls } from "@/app/components/vote-controls";
 
 const readJourney = cache(async (id: string) => {
   try { return await getPublishedJourney(id); } catch (error) { if (error instanceof JourneyInputError) return null; throw error; }
@@ -20,5 +19,5 @@ export default async function JourneyPage({ params }: PageProps<"/journeys/[id]"
   if (!journey) notFound();
   const user = await getOptionalUser();
   const [counts, ownVote] = await Promise.all([getJourneyVoteCounts(id), user ? getOwnJourneyVote(id) : Promise.resolve(null)]);
-  return <main id="main-content" className="journey-page"><JourneyArticle journey={journey} /><VoteControls journeyId={id} authenticated={!!user} currentVote={ownVote?.value ?? null} counts={counts} /></main>;
+  return <main id="main-content" className="journey-page"><JourneyArticle journey={journey} voting={{ authenticated: !!user, currentVote: ownVote?.value ?? null, counts }} /></main>;
 }

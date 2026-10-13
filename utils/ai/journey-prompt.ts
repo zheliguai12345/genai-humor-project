@@ -16,8 +16,10 @@ STRUCTURE
 - A move is something the body does: walk, touch, count, order, sit, stand, look up, listen, mail, trade. Never "write down", "note", "think about", "ask yourself", "reflect", "imagine", or "consider".
 - Choose places a student would not already plan to visit. Avoid churches, museums, and landmarks unless the premise cannot work without one, and never more than one per journey.
 - Vary neighborhoods. Do not default to Lower Manhattan, Times Square, or Midtown.
+- Keep it short. The hook is one sentence under 12 words. Each stop body is one sentence. Each move is one sentence. The premise is at most two sentences.
 
 REALITY RULES (non-negotiable)
+- Every move must be safe and legal: remain behind platform warning strips, keep clear of traffic, and never enter restricted areas.
 - Every place must be real and must be a place you are confident exists. Prefer public places (streets, parks, bridges, plazas) and long-standing businesses, which are less likely to have closed. If you are not confident a specific business exists, use a public place or describe a category ("any bodega on the block").
 - Keep the route walkable: one neighborhood or two adjacent ones, at most one subway ride. Order stops so the route never doubles back.
 - Time labels must fit the requested time of day. The total cost must fit the budget. Never state specific prices or opening hours.

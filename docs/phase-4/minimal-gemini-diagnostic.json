@@ -1,0 +1,61 @@
+{
+  "started_at": "2026-10-13T13:54:49.938Z",
+  "model": "gemini-3.8-flash",
+  "max_transport_calls": 2,
+  "retry_enabled": false,
+  "fallback_enabled": false,
+  "database_access": false,
+  "full_request": {
+    "input": {
+      "time": "afternoon",
+      "budget": "under $25",
+      "vibes": [],
+      "wild_idea": "An Alien's First Day on Earth — Explain humanity through New York."
+    },
+    "system_prompt_chars": 9014,
+    "user_prompt_chars": 227,
+    "schema_sha256": "dd2d7bdc610411c8ad0b096f93adcbf857dfee0a44ba93c8bdf6292c2f55d1e1",
+    "response_mime_type": "application/json",
+    "max_output_tokens": 8192,
+    "thinking_level": "LOW",
+    "model_streaming": false,
+    "sdk_timeout_ms": 90000,
+    "per_call_timeout_ms": 10000
+  },
+  "phase_2_successes": [
+    {
+      "model": "gemini-3.8-flash",
+      "system_prompt_chars": 8239,
+      "user_prompt_chars": 304,
+      "correction_included": true
+    },
+    {
+      "model": "gemini-3.8-flash",
+      "system_prompt_chars": 8239,
+      "user_prompt_chars": 385,
+      "correction_included": true
+    }
+  ],
+  "calls": [
+    {
+      "label": "minimal",
+      "http_status": 503,
+      "google_error_message": "This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.",
+      "success": false,
+      "duration_ms": 863
+    }
+  ],
+  "transport_calls": 1,
+  "local_dns_block": {
+    "label": "minimal",
+    "http_status": null,
+    "google_error_message": null,
+    "success": false,
+    "transport_or_sdk_error": "fetch failed",
+    "duration_ms": 28,
+    "dns_check_code": "ENOTFOUND",
+    "explanation": "Sandbox DNS resolution failed before reaching Google; not a Gemini API call."
+  },
+  "full_request_skipped": "Minimal request failed; the user authorized the full request only after success.",
+  "finished_at": "2026-10-13T13:54:50.806Z"
+}

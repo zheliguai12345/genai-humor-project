@@ -1,0 +1,34 @@
+{
+  "source": "Production-build server telemetry during the user's Google-authenticated /create submission",
+  "trace_id": "d8706c7a-20eb-464b-bf53-1d8983762d71",
+  "journey_id": "68af6953-8aba-4909-a12e-c05199098840",
+  "result": "success; persisted private draft",
+  "model": "gemini-3.8-flash",
+  "model_calls": 1,
+  "provider_retries": 0,
+  "fallback_calls": 0,
+  "validation_retries": 0,
+  "quota_before": 3,
+  "quota_after": 2,
+  "total_ms": 8974,
+  "stages": [
+    {"stage":"gemini_request","duration_ms":7850,"elapsed_ms":8156,"outcome":"success"},
+    {"stage":"gemini","duration_ms":7853,"elapsed_ms":8156,"outcome":"success"},
+    {"stage":"validation","duration_ms":1,"elapsed_ms":8377,"outcome":"success"},
+    {"stage":"unsplash","query_index":1,"search":"initial","duration_ms":341,"elapsed_ms":8722,"outcome":"found"},
+    {"stage":"unsplash","query_index":2,"search":"initial","duration_ms":447,"elapsed_ms":8830,"outcome":"found"},
+    {"stage":"unsplash","query_index":3,"search":"initial","duration_ms":446,"elapsed_ms":8831,"outcome":"found"},
+    {"stage":"unsplash","query_index":4,"search":"initial","duration_ms":444,"elapsed_ms":8831,"outcome":"found"},
+    {"stage":"unsplash","query_index":0,"search":"initial","duration_ms":454,"elapsed_ms":8832,"outcome":"found"},
+    {"stage":"photos","duration_ms":455,"elapsed_ms":8832,"outcome":"success"},
+    {"stage":"draft_save","duration_ms":142,"elapsed_ms":8974,"outcome":"success"},
+    {"stage":"total","duration_ms":8974,"elapsed_ms":8974,"outcome":"success"}
+  ],
+  "notes": [
+    "query_index 0 is the cover; 1..4 are stops. All five requests ran concurrently.",
+    "The Gemini wrapper duration includes the request; it must not be added again to the request duration.",
+    "The remaining 526 ms includes quota reservation, raw-response persistence and orchestration.",
+    "No second generation was sent because the first succeeded. The five-minute retry condition did not apply.",
+    "The safety instruction was strengthened after this output. The saved original output was not rewritten or published."
+  ]
+}

@@ -1,8 +1,9 @@
-import { generateJourney, getPublishedJourneys } from "@/utils/supabase/journeys";
-import { JourneyAuthError, JourneyInputError } from "@/utils/journeys/validation";
+import { generateJourney, getGenerationQuota, getPublishedJourneys } from "@/utils/supabase/journeys";
+import { getOptionalUser } from "@/utils/supabase/server";
+import { JourneyAuthError, JourneyInputError, JourneyServiceError, validateInput } from "@/utils/journeys/validation";
 
 export const runtime = "nodejs";
-export const maxDuration = 60;
+export const maxDuration = 120;
 const headers = { "Cache-Control": "private, no-store" };
 async function readOptions(request: Request): Promise<string | null> {
   const reader = request.body?.getReader();
@@ -37,6 +38,29 @@ export async function POST(request: Request) {
     if (text === null) return Response.json({ error: "The journey options are too large." }, { status: 413, headers });
     let input: unknown;
     try { input = JSON.parse(text); } catch { return Response.json({ error: "Enter valid journey options." }, { status: 400, headers }); }
+    if (request.headers.get("accept") === "application/x-ndjson") {
+      if (!await getOptionalUser()) return Response.json({ error: "Sign in to continue." }, { status: 401, headers });
+      input = validateInput(input);
+      const encoder = new TextEncoder();
+      const cancelled = new AbortController();
+      let closed = false;
+      const stream = new ReadableStream({
+        async start(controller) {
+          const send = (event: unknown) => { if (!closed) controller.enqueue(encoder.encode(JSON.stringify(event) + "\n")); };
+          try {
+            const data = await generateJourney(input, progress => send({ type: "progress", ...progress }), AbortSignal.any([request.signal, cancelled.signal]));
+            send({ type: "complete", data });
+          } catch (error) {
+            const message = error instanceof JourneyAuthError || error instanceof JourneyInputError || error instanceof JourneyServiceError
+              ? error.message : "We couldn't complete this journey. Please try again.";
+            const quota = await getGenerationQuota().catch(() => undefined);
+            send({ type: "error", error: message, quota });
+          } finally { if (!closed) { closed = true; controller.close(); } }
+        },
+        cancel() { closed = true; cancelled.abort(); },
+      });
+      return new Response(stream, { headers: { ...headers, "Content-Type": "application/x-ndjson", "X-Content-Type-Options": "nosniff", "X-Accel-Buffering": "no" } });
+    }
     return Response.json(await generateJourney(input), { status: 201, headers });
   } catch (error) {
     if (error instanceof JourneyAuthError) return Response.json({ error: error.message }, { status: 401, headers });
