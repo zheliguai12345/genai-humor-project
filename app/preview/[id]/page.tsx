@@ -8,12 +8,12 @@ export const metadata: Metadata = { title: "Preview your journey", robots: { ind
 export const maxDuration = 120;
 export default async function PreviewPage({ params }: PageProps<"/preview/[id]">) {
   const { id } = await params;
-  if (!await getOptionalUser()) redirect(`/?signin=preview&next=${encodeURIComponent(`/preview/${id}`)}`);
+  if (!await getOptionalUser()) redirect(`/signin?next=${encodeURIComponent(`/preview/${id}`)}`);
   let journey;
   try { journey = await getOwnDraft(id); }
   catch (error) {
     if (error instanceof JourneyInputError) notFound();
-    if (error instanceof JourneyAuthError) redirect("/?signin=preview");
+    if (error instanceof JourneyAuthError) redirect(`/signin?next=${encodeURIComponent(`/preview/${id}`)}`);
     throw error;
   }
   if (!journey) notFound();

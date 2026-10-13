@@ -9,7 +9,7 @@ export const root = path.resolve(import.meta.dirname, '../..');
 export async function moduleLoader(file, dependencies = {}, env = {
   SUPABASE_SECRET_KEY:'isolated-test', GEMINI_MODEL:'isolated-model', GEMINI_API_KEY:'isolated-test', UNSPLASH_ACCESS_KEY:'isolated-test',
 }) {
-  const context = vm.createContext({process:{env},AbortSignal:dependencies.AbortSignal??AbortSignal,URL,crypto:webcrypto,fetch:dependencies.fetch,Map,Set,
+  const context = vm.createContext({process:{env},AbortSignal:dependencies.AbortSignal??AbortSignal,URL,URLSearchParams,crypto:webcrypto,fetch:dependencies.fetch,Map,Set,
     console:dependencies.console??{warn(){}},setTimeout:dependencies.setTimeout??setTimeout,clearTimeout:dependencies.clearTimeout??clearTimeout,Response,ReadableStream,TextEncoder,TextDecoder});
   const cache=new Map();
   async function load(filename){

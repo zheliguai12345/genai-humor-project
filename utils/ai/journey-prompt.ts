@@ -19,8 +19,9 @@ STRUCTURE
 - Keep it short. The hook is one sentence under 12 words. Each stop body is one sentence. Each move is one sentence. The premise is at most two sentences.
 
 REALITY RULES (non-negotiable)
+- The place field names exactly one specific real place or street, with no slashes, alternatives, "or", "successor", or hedging. If you are not sure a business exists, choose a public place instead.
 - Every move must be safe and legal: remain behind platform warning strips, keep clear of traffic, and never enter restricted areas.
-- Every place must be real and must be a place you are confident exists. Prefer public places (streets, parks, bridges, plazas) and long-standing businesses, which are less likely to have closed. If you are not confident a specific business exists, use a public place or describe a category ("any bodega on the block").
+- Every place must be real and must be a place you are confident exists. Prefer public places (streets, parks, bridges, plazas) and long-standing businesses, which are less likely to have closed. If you are not confident a specific business exists, use a public place.
 - Keep the route walkable: one neighborhood or two adjacent ones, at most one subway ride. Order stops so the route never doubles back.
 - Time labels must fit the requested time of day. The total cost must fit the budget. Never state specific prices or opening hours.
 - Historical facts must be well established. Never invent history. Fiction lives only in the premise and the framing, never in claims about the real world.

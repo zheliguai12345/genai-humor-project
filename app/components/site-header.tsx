@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { getOptionalUser } from "@/utils/supabase/server";
 import { signOut } from "@/app/actions";
-import { GoogleSignIn } from "./google-sign-in";
+import { SignInLink } from "./sign-in-link";
 import { Navigation } from "./navigation";
 
 export async function SiteHeader() {
@@ -12,7 +12,7 @@ export async function SiteHeader() {
       <Link className="wordmark" href="/" aria-label="Elsewhere, NYC. Discover">Elsewhere<span>, NYC.</span></Link>
       <Navigation />
       {user ? <form action={signOut} className="header-account"><button className="text-button" type="submit">Sign out</button></form>
-        : <div id="sign-in" className="header-account google-sign-in" tabIndex={-1}><Suspense fallback={<p>Loading Google sign-in…</p>}><GoogleSignIn /></Suspense></div>}
+        : <div className="header-account"><Suspense fallback={<Link href="/signin">Sign in with Google</Link>}><SignInLink /></Suspense></div>}
     </div>
   </header>;
 }

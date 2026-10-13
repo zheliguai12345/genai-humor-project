@@ -6,6 +6,7 @@ import type { Journey } from "@/utils/journeys/types";
 import { publishJourney } from "@/app/journey-actions";
 import { JourneyCard } from "@/app/components/journey-card";
 import { JourneyStops } from "@/app/components/journey-article";
+import { RouteMap } from "@/app/components/route-map";
 
 export function PreviewEditor({ journey }: { journey: Journey }) {
   const [error, setError] = useState("");
@@ -27,7 +28,7 @@ export function PreviewEditor({ journey }: { journey: Journey }) {
       finally { locked.current = false; }
     });
   }
-  return <><h1 className="sr-only">Preview your journey</h1><div className="preview-layout"><div className="preview-card"><JourneyCard journey={journey} privateView linked={false} /></div><div><JourneyStops journey={journey} /></div></div>
+  return <><h1 className="sr-only">Preview your journey</h1><div className="preview-layout"><div className="preview-card"><JourneyCard journey={journey} privateView linked={false} /><RouteMap journey={journey} /></div><div><JourneyStops journey={journey} /></div></div>
     <div className="publish-buttons"><button className="button" type="button" disabled={pending} onClick={publish}>{pending ? "Publishing…" : "Publish"}</button>
       <Link className="button secondary" href="/create" aria-disabled={pending} onClick={e => { if (pending) e.preventDefault(); }}>Try again</Link></div>
     {error && <p role="alert" className="notice error-notice">{error}</p>}

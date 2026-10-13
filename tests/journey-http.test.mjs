@@ -32,7 +32,7 @@ test('generation requests reject invalid JSON and oversized bodies', async () =>
 test('public editorial detail and privacy render; existing private drafts stay inaccessible',async()=>{
   const detail=await fetch(origin+'/journeys/e15e0000-0000-4000-8000-000000000001');
   assert.equal(detail.status,200);
-  const html=await detail.text();
+  const html=(await detail.text()).replace(/key=[^&"<]+/g,"key=[REDACTED]");
   assert.match(html,/The Museum That Doesn/);assert.match(html,/>Maps/);assert.match(html,/Upvote/);assert.doesNotMatch(html,/Would you actually spend a day like this|The route, at a glance/);
   assert.equal((await fetch(origin+'/privacy')).status,200);
   for(const path of ['/journeys/823d4b05-9fd0-4fc2-8adc-32f61adade00','/api/journeys/823d4b05-9fd0-4fc2-8adc-32f61adade00'])assert.equal((await fetch(origin+path)).status,404);

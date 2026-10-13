@@ -16,8 +16,15 @@ Set or verify the following names for the intended Vercel Production and Preview
 | `NEXT_PUBLIC_SUPABASE_URL` | Preserve existing project URL |
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Preserve existing public client configuration |
 | `NEXT_PUBLIC_GOOGLE_CLIENT_ID` | Preserve existing Google web OAuth client |
+| `NEXT_PUBLIC_GOOGLE_MAPS_EMBED_KEY` | New browser-visible key for directions maps on Journey and Preview; enter privately |
 
 No provider/database secret may use a `NEXT_PUBLIC_` prefix. The same Gemini key is used for the primary and fallback models. Verify paid billing and access privately; one local success does not establish production runtime configuration or guaranteed model availability.
+
+## Route maps
+
+Set `NEXT_PUBLIC_GOOGLE_MAPS_EMBED_KEY` before building each intended environment; Next.js embeds this public value into browser assets. Enable Maps Embed API in the key's Google Cloud project. Apply website/HTTP referrer restrictions for the actual local, production, and preview origins, plus an API restriction to Maps Embed API. The user performs these settings manually; this phase does not access any cloud account settings. See [Google's setup guide](https://developers.google.com/maps/documentation/embed/get-api-key).
+
+The iframe uses `directions`, walking mode, URL-encoded place queries, and `strict-origin-when-cross-origin` so the website origin reaches Google for restriction checks. See [the official embedding guide](https://developers.google.com/maps/documentation/embed/embedding-map). Without the key, pages render only the full-route link. Recheck a published Journey and an owned Preview on the submitted deployment URL; a local map rendering does not verify production restrictions. Generic place instructions are skipped, with a few code-only editorial anchors; map rendering does not certify business existence, hours, route safety, or feasibility.
 
 ## Function duration
 
@@ -38,6 +45,8 @@ The app uses Google Identity Services redirect POST to its own `/auth/callback`,
 | Commit-specific deployment | Exact generated HTTPS origin | The same origin plus `/auth/callback` |
 
 Register the actual new origin if it differs. Do not assume wildcard preview domains work. Check OAuth publishing/test-user restrictions, Google consent branding, and session/nonce validation on the actual submitted URL.
+
+The local real-login check still showed the old Google app name, `The Humor Project`, on Google's account chooser. Update OAuth consent branding to `Elsewhere, NYC.` manually if desired. `/signin?next=...` is now the app's login entry; the registered callback remains `/auth/callback`. Return cookies are HttpOnly, Secure, scoped to that callback and expire after ten minutes. Verify a signed-out vote → Sign in with Google → Google login → original page round trip on the deployment URL.
 
 ## Public access and commit-specific URL
 

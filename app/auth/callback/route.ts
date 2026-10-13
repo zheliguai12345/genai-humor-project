@@ -2,8 +2,8 @@ import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
 import { getCurrentProfile } from "@/utils/supabase/profile";
-import { needsNames } from "@/utils/profile";
-import { LOGIN_NONCE_COOKIE, LOGIN_RETURN_COOKIE, matchingCsrf, safeReturnPath } from "@/utils/auth-validation";
+import { LOGIN_NONCE_COOKIE, LOGIN_RETURN_COOKIE, matchingCsrf } from "@/utils/auth-validation";
+import { safeReturnPath } from "@/utils/auth-return";
 
 function redirect(request: NextRequest, path: string) {
   const response = NextResponse.redirect(new URL(path, request.url), 303);
@@ -18,30 +18,30 @@ function redirect(request: NextRequest, path: string) {
 // GIS redirect mode sends a standard form POST here, not an OAuth code GET.
 export async function POST(request: NextRequest) {
   if (Number(request.headers.get("content-length") ?? 0) > 16_384) {
-    return redirect(request, "/?error=google-sign-in");
+    return redirect(request, "/signin?error=google-sign-in");
   }
   let form: FormData;
   try { form = await request.formData(); }
-  catch { return redirect(request, "/?error=google-sign-in"); }
+  catch { return redirect(request, "/signin?error=google-sign-in"); }
   const cookieStore = await cookies();
   const nonce = cookieStore.get(LOGIN_NONCE_COOKIE)?.value;
   const credential = form.get("credential");
   if (
     !matchingCsrf(cookieStore.get("g_csrf_token")?.value, form.get("g_csrf_token")) ||
     !nonce || typeof credential !== "string" || !credential || credential.length > 12_000
-  ) return redirect(request, "/?error=google-sign-in");
+  ) return redirect(request, "/signin?error=google-sign-in");
 
   const supabase = await createClient();
   const { error } = await supabase.auth.signInWithIdToken({
     provider: "google", token: credential, nonce,
   });
-  if (error) return redirect(request, "/?error=google-sign-in");
+  if (error) return redirect(request, "/signin?error=google-sign-in");
   const current = await getCurrentProfile();
-  if (!current) return redirect(request, "/?error=google-sign-in");
+  if (!current) return redirect(request, "/signin?error=google-sign-in");
   const returnTo = safeReturnPath(cookieStore.get(LOGIN_RETURN_COOKIE)?.value);
-  return redirect(request, returnTo !== "/" ? returnTo : needsNames(current.profile) ? "/profile" : "/");
+  return redirect(request, returnTo);
 }
 
 export async function GET(request: NextRequest) {
-  return redirect(request, "/?error=google-sign-in");
+  return redirect(request, "/signin?error=google-sign-in");
 }

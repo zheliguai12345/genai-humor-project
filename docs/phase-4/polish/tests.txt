@@ -1,0 +1,108 @@
+(node:33418) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/zheliguai/Desktop/GenAI_The%20Humor%20Project/genai-humor-project/utils/auth-validation.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/zheliguai/Desktop/GenAI_The Humor Project/genai-humor-project/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ callback rejects missing, mismatched, and non-string CSRF tokens (1.971601ms)
+✔ avatar type cannot be asserted just by a filename or MIME type (0.46727ms)
+✔ one missing or whitespace-only name still requires completion (0.279368ms)
+✔ Google return paths preserve local queries and reject external, encoded and malformed redirects (0.681738ms)
+(node:33419) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ card upvote → cancel → vote updates score immediately and sends null for cancellation (296.565581ms)
+✔ failed votes and failed cancellations roll back selection and score, with an alert (61.70501ms)
+✔ anonymous card votes open local sign-in guidance without invoking any mutation (62.203248ms)
+✔ card markup includes the shared vote widget and metadata, while private cards have only status (90.369686ms)
+(node:33420) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ 503 then success retries the primary once after two seconds, without falling back (275.77469ms)
+✔ 503/504 exhaustion calls default fallback exactly once with its supported minimal thinking (68.827186ms)
+✔ 400, 403, 429 and unrelated network failures never retry; fallback failure never recurses (267.895372ms)
+✔ network timeout recovery and abort are bounded by the overall deadline (35.411812ms)
+(node:33421) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ streamed provider recovery and photo progress come from real server events, including split Unicode chunks (161.155089ms)
+✔ stream errors preserve quota and never silently retry; interrupted success is not invented (43.175878ms)
+(node:33422) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ anonymous users cannot generate, publish, vote, or read drafts/history; no privileged client or API is used (381.322486ms)
+✔ Top uses net score across all published vote pages; New uses publication time and excludes drafts (174.154969ms)
+✔ quota and Your journeys only read the authenticated user; draft vote totals remain private (142.503791ms)
+✔ public reads exclude drafts, and private reads cannot return another user’s draft or generation records (123.465981ms)
+✔ a non-owner cannot publish or trigger any Unsplash download (80.240832ms)
+✔ draft voting is rejected and repeated published votes update the same authenticated association (84.35953ms)
+✔ quota denial happens before paid API access (128.131403ms)
+✔ invalid input cannot consume quota or call the model (76.26869ms)
+✔ validation correction shares one quota reservation, retains prior output, and saves only a draft (88.147789ms)
+✔ persistent invalid output stops after two corrections; exhausted provider failures do not restart generation or expose details (134.176079ms)
+✔ a lost draft-save response cannot overwrite a committed successful run or trigger another model call (78.789292ms)
+✔ publication sends only indices to the transaction, then tracks the committed stored photos (55.784642ms)
+✔ tracking failures only produce safe logs; invalid selections cannot publish (72.513291ms)
+✔ output validation enforces required fields, sizes, stop counts, and photographable query lengths (13.835149ms)
+✔ Gemini SDK uses a 90s total ceiling and low thinking, JSON schema, configured model, and no implicit transport retries (20.089438ms)
+✔ Unsplash preserves API URLs, takes first three photos, and rejects download SSRF (21.902451ms)
+✔ an empty photo search broadens once; provider errors do not produce repeat requests (50.476591ms)
+✔ requested physical-action and neighborhood quality rules appear verbatim in the system prompt (4.875363ms)
+✔ all four seeds retain approved sample copy and migration explicitly enables RLS without touching tasks (2.879538ms)
+✔ vote → cancel → vote deletes only the authenticated user row, even with a forged extra identity (98.424748ms)
+✔ own card votes are read with authenticated identity and actual fallback model is persisted in the same run (63.054111ms)
+✔ unique photograph searches start together, rather than waiting for each other (85.765238ms)
+✔ an Unsplash timeout becomes null after one short request and does not trigger a second search (2015.112486ms)
+✔ anonymous generation and private history requests require authentication (117.493272ms)
+✔ cross-origin generation is denied before parsing or provider access (8.215303ms)
+✔ generation requests reject invalid JSON and oversized bodies (20.478646ms)
+✔ public editorial detail and privacy render; existing private drafts stay inaccessible (1122.491835ms)
+✔ direct anonymous Journey vote action is denied and cross-origin actions are rejected (48.182133ms)
+✔ anonymous streaming generation is denied before quota, model, or private progress (11.379733ms)
+(node:33424) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ anonymous Create and Preview pages redirect before reading quota or private content (265.823685ms)
+✔ another user’s draft is not rendered, while the owner can preview it (114.861699ms)
+✔ public Journey pages and metadata never expose drafts, even to their author (39.755748ms)
+✔ published Journey pages render for anonymous readers without a private vote read (33.448898ms)
+(node:33427) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ Maps and photographer links preserve place text and the required referral attribution (242.102795ms)
+✔ duration labels handle shared PM suffixes, AM-to-PM windows, and midnight without inventing route estimates (29.027052ms)
+✔ quota reset uses the same UTC calendar boundary as the database and shows a New York time label (61.773297ms)
+✔ all design text color pairs meet the requested 4.5:1 contrast, including selection and disabled states (0.866518ms)
+(node:33428) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/zheliguai/Desktop/GenAI_The%20Humor%20Project/genai-humor-project/utils/journeys/maps.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/zheliguai/Desktop/GenAI_The Humor Project/genai-humor-project/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:33428) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+✔ walking URLs preserve ordered specific stops, filter generic instructions, and encode waypoints (4.971046ms)
+✔ editorial map anchors resolve ambient seed stops without rewriting their stored copy (0.588817ms)
+✔ missing embed key keeps the full route link and renders no iframe (220.412423ms)
+(node:33430) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ profile file selection creates a local preview and save hint without uploading (225.295045ms)
+✔ invalid avatar size and spoofed format show an immediate error and block Save profile (47.414419ms)
+✔ public home loads, protected pages redirect without content (392.523226ms)
+✔ callback rejects missing CSRF and missing nonce without establishing a session (31.675475ms)
+✔ cross-site nonce requests are denied (11.187862ms)
+✔ login nonce is hashed for Google and retained in a protected callback cookie (10.292969ms)
+✔ return cookie preserves a local query, expires after ten minutes, and rejects external next (13.823473ms)
+(node:33432) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ unauthenticated mutation and reads never create a privileged client (153.227502ms)
+✔ malformed IDs and invalid vote values are rejected before database access (44.317958ms)
+✔ a valid UUID for a missing caption is rejected without INSERT (16.838318ms)
+✔ client identity is ignored and each up/down submission INSERTs a new row (17.71303ms)
+✔ database failure cannot return a saved result (10.407223ms)
+✔ legacy caption rating now redirects to public Discover without altering its tables (134.205932ms)
+(node:33435) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/zheliguai/Desktop/GenAI_The%20Humor%20Project/genai-humor-project/utils/auth-validation.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/zheliguai/Desktop/GenAI_The Humor Project/genai-humor-project/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:33435) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+✔ successful fixed callback restores the local query/fragment and clears both short-lived cookies (156.139159ms)
+✔ callback revalidates a tampered external return cookie before redirecting (81.433816ms)
+✔ signin page passes only a safe next to its one central Google component; signed-in users return locally (39.698449ms)
+ℹ tests 70
+ℹ suites 0
+ℹ pass 70
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 4587.591605

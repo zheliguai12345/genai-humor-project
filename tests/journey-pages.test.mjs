@@ -26,9 +26,9 @@ function dependencies({signedIn=false,own=false,published=false}={}){
 test('anonymous Create and Preview pages redirect before reading quota or private content',async()=>{
   const d=dependencies();
   const create=await moduleLoader('app/create/page.tsx',d.deps);
-  await assert.rejects(create.default(),e=>e.redirect==='/?signin=create&next=%2Fcreate');
+  await assert.rejects(create.default(),e=>e.redirect==='/signin?next=%2Fcreate');
   const preview=await moduleLoader('app/preview/[id]/page.tsx',d.deps);
-  await assert.rejects(preview.default({params:Promise.resolve({id})}),e=>e.redirect.includes('signin=preview'));
+  await assert.rejects(preview.default({params:Promise.resolve({id})}),e=>e.redirect===`/signin?next=${encodeURIComponent(`/preview/${id}`)}`);
   assert.deepEqual(d.events,[]);
 });
 test('another user’s draft is not rendered, while the owner can preview it',async()=>{

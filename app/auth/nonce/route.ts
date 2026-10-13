@@ -1,6 +1,7 @@
 import { createHash, randomBytes } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
-import { LOGIN_NONCE_COOKIE, LOGIN_RETURN_COOKIE, safeReturnPath } from "@/utils/auth-validation";
+import { LOGIN_NONCE_COOKIE, LOGIN_RETURN_COOKIE } from "@/utils/auth-validation";
+import { safeReturnPath } from "@/utils/auth-return";
 
 export async function GET(request: NextRequest) {
   if (request.headers.get("sec-fetch-site") === "cross-site") {

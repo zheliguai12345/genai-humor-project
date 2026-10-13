@@ -3,6 +3,7 @@
 import Script from "next/script";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { safeReturnPath } from "@/utils/auth-return";
 
 declare global {
   interface Window {
@@ -18,14 +19,14 @@ declare global {
   }
 }
 
-export function GoogleSignIn() {
+export function GoogleSignIn({ nextPath }: { nextPath?: string } = {}) {
   const button = useRef<HTMLDivElement>(null);
   const [ready, setReady] = useState(false);
   const [error, setError] = useState("");
   const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
   const pathname = usePathname();
   const search = useSearchParams();
-  const returnTo = search.get("next") ?? pathname;
+  const returnTo = safeReturnPath(nextPath ?? search.get("next") ?? pathname);
 
   useEffect(() => {
     if (!ready || !clientId) return;

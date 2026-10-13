@@ -7,7 +7,8 @@ An editorial NYC experience magazine built with Next.js 16.4, React, Supabase, G
 ## Product routes
 
 - `/`: public card wall with Top (net score) and New (publication time), and voting directly on each card.
-- `/journeys/[id]`: compact published journeys, Maps links, expandable stop descriptions, credits, and the same voting controls.
+- `/journeys/[id]`: compact published journeys, per-stop photos, an embedded walking route, Maps links, expandable stop descriptions, and the same voting controls.
+- `/signin`: central Google login with a validated local return path and short-lived callback cookies.
 - `/create`: one idea field, seven starting-theme tags, collapsed Options, and server-driven generation progress.
 - `/preview/[id]`: author's private draft card and stops, explicit publication using stored photo candidate 0, and Try again.
 - `/profile`: circular avatar with a local unsaved preview, names, Save profile, and Your journeys cards.
@@ -45,11 +46,12 @@ Every generation submission stores input, prompts, the actual model, and exact r
 
 Long image queries are truncated to six words. Photo searches run concurrently, each with a two-second timeout; only an empty successful search broadens once. Missing/error photos become placeholders. Publication saves candidate indices transactionally, then sends best-effort Unsplash tracking. Votes have three states: up, down, and none; canceling deletes only the authenticated user's vote in the server-only module.
 
-Fonts are self-hosted by Next.js: Geist for readable body text and Newsreader for editorial titles. Photos retain Unsplash's returned hotlink URLs and photographer attribution. Missing images use typographic placeholders.
+Fonts are self-hosted by Next.js: Geist for readable body text and Newsreader for editorial titles. App text is at least 14px, with narrative text at least 16px. Card hooks occupy up to two lines and metadata wraps. Photos retain Unsplash's returned hotlink URLs and photographer attribution: Discover uses hover/tap credits, while Journey and Preview show credits inline. Missing images use typographic placeholders. Journey and Preview share a lazy Google Maps Embed walking route; missing keys leave the full-route link available. Generic place instructions are filtered without changing stored Journey data.
 
 ## Acceptance and deployment
 
 - [Phase 4 acceptance report](docs/phase-4/acceptance-report.md)
+- [Phase 4 finishing acceptance and screenshots](docs/phase-4/polish/acceptance-report.md)
 - [Remaining manual acceptance](docs/phase-4/manual-acceptance.md)
 - [Deployment preparation](docs/phase-4/deployment-checklist.md)
 - [Phase 2 backend report](docs/phase-2-backend.md)
