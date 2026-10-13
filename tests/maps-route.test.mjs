@@ -31,6 +31,25 @@ test('both route URLs use clean queries while the source place copy stays intact
   assert.equal(embed.searchParams.get('destination'), mapQuery("Faicco's Italian Specialties, 260 Bleecker St"));
   assert.equal(original, "The High Line at 14th Street, looking toward the old meatpackers' cold storage");
 });
+test('Any/A category stops map only to the street and neighborhood, including in both route URLs', () => {
+  for (const [place, expected] of [
+    ['Any bodega on 48th Ave, Sunnyside', '48th Ave, Sunnyside'],
+    ['A coffee cart on Broadway, Upper West Side', 'Broadway, Upper West Side'],
+    ['A deli at 54 Pearl St, Financial District · corner stop', '54 Pearl St, Financial District'],
+    ['A coffee cart, Fifth Ave & 59th St', 'Fifth Ave & 59th St'],
+  ]) assert.equal(mapQuery(place), `${expected}, New York, NY`);
+  assert.equal(mapQuery('A-1 Record Shop, 439 E 6th St'), 'A-1 Record Shop, 439 E 6th St, New York, NY');
+  const stops = [{ position: 1, place: 'Any bodega on 48th Ave, Sunnyside' },
+    { position: 2, place: 'A coffee cart on Broadway, Upper West Side' }];
+  const route = journeyRoute({ id: 'category-test', stops });
+  assert.equal(route.places.length, 2);
+  for (const url of [route.fullUrl, routeEmbedUrl(route.places, 'isolated-key')]) {
+    const parameters = new URL(url).searchParams;
+    assert.equal(parameters.get('origin'), '48th Ave, Sunnyside, New York, NY');
+    assert.equal(parameters.get('destination'), 'Broadway, Upper West Side, New York, NY');
+  }
+  assert.equal(stops[0].place, 'Any bodega on 48th Ave, Sunnyside');
+});
 test('walking URLs preserve ordered specific stops, filter generic instructions, and encode waypoints', () => {
   const route = journeyRoute(journey);
   assert.deepEqual(route.places, ['Greene Street, New York, NY', 'Columbus Park, New York, NY', 'Stone Street, New York, NY']);

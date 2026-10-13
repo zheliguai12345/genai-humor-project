@@ -16,9 +16,17 @@ export function specificMapPlace(place: string): boolean {
 }
 export function mapQuery(place: string): string {
   const parts = place.split(/[·,]/).map(part => part.trim()).filter(Boolean);
+  const categoryStop = /^(Any|A)\s+/i.test(parts[0] ?? "");
   const descriptive = /\b(looking|toward|towards|corner|stop|block)\b/i;
   const address = /\d|\b(street|st|avenue|ave|broadway|pl|place|plaza|park|road|rd|blvd|boulevard|way|drive|dr|lane|ln)\b|&/i;
+  const neighborhood = /^[A-Z][\p{L}'’.-]+(?:\s+[A-Z][\p{L}'’.-]+)*$/u;
   const locations = parts.flatMap((part, index) => {
+    if (categoryStop) {
+      // Generic venues map to their street/neighborhood, never to a guessed business.
+      const location = index === 0 ? part.match(/\b(?:on|at|along|near|in)\s+(.+)$/i)?.[1].trim() ?? "" : part;
+      return location && !/^[a-z]/.test(location) && !descriptive.test(location) &&
+        (address.test(location) || neighborhood.test(location)) ? [location] : [];
+    }
     if (index === 0) {
       // Keep the venue identity, dropping an appended narrative qualifier such as "block".
       const name = part.replace(/\s+\b(block|stop|corner|looking|toward|towards)\b.*$/i, "").trim();

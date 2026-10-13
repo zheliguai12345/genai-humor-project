@@ -327,7 +327,8 @@ test('requested physical-action and neighborhood quality rules appear verbatim i
     '- Choose places a student would not already plan to visit. Avoid churches, museums, and landmarks unless the premise cannot work without one, and never more than one per journey.',
     '- Vary neighborhoods. Do not default to Lower Manhattan, Times Square, or Midtown.',
     '- If you are not certain of a date, a sequence of events, or a cause and effect, leave it out. A vivid true detail is better than a dramatic uncertain one.',
-    '- The place field contains only the place name and its street address or nearest cross streets, written so it can be searched on Google Maps. Put any description in the body, never in the place field.']) assert.ok(prompt.SYSTEM_PROMPT.includes(sentence));
+    '- The place field contains only the place name and its street address or nearest cross streets, written so it can be searched on Google Maps. Put any description in the body, never in the place field.',
+    '- Name a specific business only if it is well known and has operated for many years. For an everyday stop like a grocery, bodega, deli, or coffee cart, write the category and the street instead, for example "Any bodega on 48th Ave, Sunnyside".']) assert.ok(prompt.SYSTEM_PROMPT.includes(sentence));
 });
 
 test('migration seeds match the maintained editorial copy and enable RLS without touching tasks', () => {
