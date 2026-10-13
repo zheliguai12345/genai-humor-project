@@ -338,6 +338,17 @@ test('requested physical-action and neighborhood quality rules appear verbatim i
     '- Each image query must match the time of day of that stop. Add "daytime", "sunset", or "night" when it matters.']) assert.ok(prompt.SYSTEM_PROMPT.includes(sentence));
 });
 
+test('IMAGES instructions exactly match the approved motif, stop, and time-of-day wording', async () => {
+  const prompt = await moduleLoader('utils/ai/journey-prompt.ts');
+  const expected = `IMAGES
+- cover_image_query captures the theme's central image or motif, not the neighborhood. It does not need to be in New York. Think of what an editor would put on a magazine cover for this premise: for example "spider web close up" for a superhero premise, "tarot cards on table" for a tarot premise, "black cat in window" for a witch's familiar, "old handwritten letter" for a letter premise. 2 to 5 concrete, photographable words.
+- Each stop's image_query shows that real place or what the reader will see there, usually including the place or neighborhood name.
+- Never search for named fictional characters, celebrities, brands, or logos. Use a motif that evokes them instead.
+- Each image query must match the time of day of that stop. Add "daytime", "sunset", or "night" when it matters.`;
+  assert.equal(prompt.BASE_SYSTEM_PROMPT.slice(prompt.BASE_SYSTEM_PROMPT.indexOf('\nIMAGES\n') + 1), expected);
+  assert.ok(prompt.SYSTEM_PROMPT.includes(expected));
+});
+
 test('migration seeds match the maintained editorial copy and enable RLS without touching tasks', () => {
   const sql = fs.readFileSync(path.join(root, 'supabase/migrations/202610120001_elsewhere_journeys.sql'), 'utf8');
   const seededStops = [...sql.matchAll(/jsonb_to_recordset\('((?:''|[^'])*)'::jsonb\)/g)]
