@@ -7,7 +7,6 @@ function Filmstrip({ covers, reverse = false }: { covers: JourneySummary[]; reve
     <div className="filmstrip-track">{[0, 1].map(copy => <div className="filmstrip-reel" key={copy}>{covers.map(journey => <div className="filmstrip-frame" key={journey.id}>
       {/* Preload the moving reel on desktop; hidden mobile films use a transparent pixel. */}
       <picture><source media="(min-width: 901px)" srcSet={journey.cover_image!.url} />
-        {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" alt="" width={400} height={500} loading="eager" decoding="async" />
       </picture>
       <span>{journey.title}</span>
