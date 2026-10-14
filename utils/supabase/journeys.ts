@@ -154,7 +154,10 @@ export async function getDiscoverJourneys(sort: "top" | "new" = "top") {
   const score = (id: string) => (counts[id]?.up ?? 0) - (counts[id]?.down ?? 0);
   published.sort((a, b) => (sort === "top" ? score(b.id) - score(a.id) : 0)
     || (b.published_at ?? "").localeCompare(a.published_at ?? "") || a.id.localeCompare(b.id));
-  return { journeys: published.slice(0, 50), counts };
+  const filmstrip = [...published].filter(journey => journey.status === "published" && journey.cover_image?.url)
+    .sort((a, b) => score(b.id) - score(a.id) || (b.published_at ?? "").localeCompare(a.published_at ?? "") || a.id.localeCompare(b.id))
+    .slice(0, 12);
+  return { journeys: published.slice(0, 50), counts, filmstrip };
 }
 
 export async function generateJourney(inputValue: unknown, progress?: (event: GenerationProgress) => void, requestSignal?: AbortSignal) {

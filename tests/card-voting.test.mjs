@@ -42,5 +42,7 @@ test('card markup includes the shared vote widget and metadata, while private ca
   assert.match(publicHtml,/Cancel upvote/);assert.match(publicHtml,/Downvote/);assert.match(publicHtml.replace(/<[^>]*>/g,''),/Queens · Under \$25 · 4 stops/);assert.match(publicHtml,/class="card-link"/);
   const privateHtml=renderToStaticMarkup(React.createElement(JourneyCard,{journey:{...journey,status:'draft'},privateView:true}));
   assert.match(publicHtml,/card-hook-truncated/);
+  assert.match(publicHtml,/aria-label="Share this journey"/);
+  assert.doesNotMatch(privateHtml,/Share this journey/);
   assert.match(privateHtml,/Draft/);assert.match(privateHtml,/\/preview\//);assert.doesNotMatch(privateHtml,/Upvote|Downvote|card-hook-truncated/);
 });

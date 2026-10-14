@@ -156,6 +156,22 @@ test('Top uses net score across all published vote pages; New uses publication t
   assert.deepEqual(Array.from((await b.api.getDiscoverJourneys('new')).journeys,j=>j.id),[newId,editorialId,publishedId]);
 });
 
+test('hero filmstrip selects at most twelve published covers by net votes, independently of New sorting',async()=>{
+  const b=await backend();
+  const ids=Array.from({length:16},(_,i)=>`${String(i+10).padStart(8,'0')}-0000-4000-8000-000000000000`);
+  ids.forEach((id,i)=>{
+    b.rows.journeys.push({id,status:'published',cover_image:image,published_at:'2026-10-01'});
+    b.rows.journey_votes.push(...Array.from({length:i},()=>({journey_id:id,value:'up',journeys:{status:'published'}})));
+  });
+  b.rows.journeys.push({id:'no-cover',status:'published',cover_image:null});
+  b.rows.journey_votes.push(...Array.from({length:40},()=>({journey_id:'no-cover',value:'up',journeys:{status:'published'}})));
+  const feed=await b.api.getDiscoverJourneys('new');
+  assert.deepEqual(Array.from(feed.filmstrip,j=>j.id),ids.slice(4).reverse());
+  assert.ok(feed.filmstrip.every(j=>j.status==='published'&&j.cover_image?.url));
+  const small=await backend();small.rows.journeys.find(j=>j.id===publishedId).cover_image=image;
+  assert.deepEqual(Array.from((await small.api.getDiscoverJourneys()).filmstrip,j=>j.id),[publishedId]);
+});
+
 test('quota and Your journeys only read the authenticated user; draft vote totals remain private',async()=>{
   const b=await backend();const now=new Date().toISOString();
   b.rows.generation_runs.push({id:'today-own',user_id:uid,created_at:now},{id:'today-other',user_id:other,created_at:now});

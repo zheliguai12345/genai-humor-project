@@ -4,7 +4,7 @@ import * as jsx from 'react/jsx-runtime';
 import { moduleLoader } from './helpers/module-loader.mjs';
 
 const id='33333333-3333-4333-8333-333333333333';
-function dependencies({signedIn=false,own=false,published=false}={}){
+function dependencies({signedIn=false,own=false,published=false,cover=false}={}){
   const events=[];
   const redirect=location=>{throw {redirect:location};};
   const notFound=()=>{throw {notFound:true};};
@@ -14,7 +14,7 @@ function dependencies({signedIn=false,own=false,published=false}={}){
     '@/utils/supabase/journeys':{
       getGenerationQuota:async()=>{events.push('quota');return {remaining:10};},
       getOwnDraft:async requested=>{events.push('draft');return own?{id:requested,status:'draft',title:'Private title'}:null;},
-      getPublishedJourney:async requested=>published?{id:requested,status:'published',title:'Published title',hook:'A short hook'}:null,
+      getPublishedJourney:async requested=>published?{id:requested,status:'published',title:'Published title',hook:'A short hook',cover_image:cover?{url:'https://images.unsplash.com/metadata-cover'}:null}:null,
       getJourneyVoteCounts:async()=>({up:2,down:1}),
       getOwnJourneyVote:async()=>{events.push('own-vote');return null;},
     },
@@ -55,4 +55,18 @@ test('published Journey pages render for anonymous readers without a private vot
   const rendered=await page.default({params:Promise.resolve({id})});
   assert.equal(rendered.props.children.props.voting.authenticated,false);
   assert.deepEqual(d.events,[]);
+});
+test('published metadata includes Open Graph and Twitter cards and omits absent cover images',async()=>{
+  for(const cover of [true,false]) {
+    const d=dependencies({published:true,cover});
+    const page=await moduleLoader('app/journeys/[id]/page.tsx',d.deps);
+    const metadata=await page.generateMetadata({params:Promise.resolve({id})});
+    assert.equal(metadata.title,'Published title');assert.equal(metadata.description,'A short hook');
+    for(const field of ['openGraph','twitter']) {
+      assert.equal(metadata[field].title,'Published title');assert.equal(metadata[field].description,'A short hook');
+      if(cover)assert.equal(metadata[field].images[0],'https://images.unsplash.com/metadata-cover');
+      else assert.ok(!('images' in metadata[field]));
+    }
+    assert.equal(metadata.twitter.card,'summary_large_image');assert.deepEqual(d.events,[]);
+  }
 });

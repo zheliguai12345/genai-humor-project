@@ -11,7 +11,12 @@ const readJourney = cache(async (id: string) => {
 });
 export async function generateMetadata({ params }: PageProps<"/journeys/[id]">): Promise<Metadata> {
   const journey = await readJourney((await params).id);
-  return journey ? { title: journey.title, description: journey.hook } : { title: "Journey not found" };
+  if (!journey) return { title: "Journey not found" };
+  const image = journey.cover_image?.url;
+  return { title: journey.title, description: journey.hook,
+    openGraph: { type: "article", title: journey.title, description: journey.hook, ...(image ? { images: [image] } : {}) },
+    twitter: { card: "summary_large_image", title: journey.title, description: journey.hook, ...(image ? { images: [image] } : {}) },
+  };
 }
 export default async function JourneyPage({ params }: PageProps<"/journeys/[id]">) {
   const { id } = await params;

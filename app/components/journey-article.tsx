@@ -4,6 +4,7 @@ import { mapsUrl, durationLabel, type VoteCounts } from "@/utils/journeys/presen
 import { Photo } from "./photo";
 import { VoteControls } from "./vote-controls";
 import { RouteMap } from "./route-map";
+import { ShareButton } from "./share-button";
 
 export function JourneyStops({ journey }: { journey: Journey }) {
   return <><ol className="compact-stops" aria-label="Journey stops">{journey.stops.map(stop => <li key={stop.position} id={`stop-${stop.position}`}>
@@ -16,9 +17,9 @@ export function JourneyStops({ journey }: { journey: Journey }) {
 export function JourneyArticle({ journey, voting }: {
   journey: Journey; voting: { authenticated: boolean; currentVote: "up" | "down" | null; counts: VoteCounts };
 }) {
-  return <><Link className="back-link" href="/">← Discover</Link><div className="journey-layout"><header className="detail-heading"><h1>{journey.title}</h1><p className="detail-hook">{journey.hook}</p>
+  return <><Link className="back-link" href="/#discover">← Discover</Link><div className="journey-layout"><header className="detail-heading"><h1>{journey.title}</h1><p className="detail-hook">{journey.hook}</p>
       <p className="detail-meta">{journey.area} · {journey.budget_label} · {durationLabel(journey)}</p>
-      <VoteControls journeyId={journey.id} {...voting} /></header>
+      <div className="card-actions"><VoteControls journeyId={journey.id} {...voting} /><ShareButton journey={{ id: journey.id, title: journey.title, hook: journey.hook, status: journey.status }} /></div></header>
     <aside className="detail-rail"><div className="detail-cover"><Photo photo={journey.cover_image} alt={`Atmosphere for ${journey.title}`} priority /></div><RouteMap journey={journey} /></aside>
     <div className="journey-content"><JourneyStops journey={journey} /></div></div></>;
 }

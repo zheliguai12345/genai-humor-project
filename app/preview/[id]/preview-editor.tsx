@@ -23,7 +23,7 @@ export function PreviewEditor({ journey }: { journey: Journey }) {
           ...journey.stops.map(stop => ({ position: stop.position, candidate_index: stop.image ? 0 : null }))];
         const result = await publishJourney(journey.id, selections);
         if (result.error) setError(result.error);
-        else { router.push("/?sort=new"); router.refresh(); }
+        else { router.push("/?sort=new#discover"); router.refresh(); }
       } catch { setError("Couldn't publish. Your draft is safe. Please try again."); }
       finally { locked.current = false; }
     });
