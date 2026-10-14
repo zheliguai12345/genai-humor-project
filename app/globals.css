@@ -1,5 +1,5 @@
 @import "tailwindcss";
-:root { --paper:#f7f5ee; --ink:#21392e; --muted:#5b6258; --accent:#85432a; --wash:#eceee4; --white:#fffdf8; --line:#b8bcb1; --header-height:89px; }
+:root { --paper:#f7f5ee; --ink:#21392e; --muted:#5b6258; --accent:#85432a; --wash:#eceee4; --white:#fffdf8; --line:#b8bcb1; --header-height:77px; }
 @theme inline { --color-background:var(--paper); --color-foreground:var(--ink); --font-sans:var(--font-geist-sans); }
 * { box-sizing:border-box; }
 html { scroll-behavior:smooth; }
@@ -21,12 +21,13 @@ main { width:min(calc(100% - 64px),1280px); margin:auto; padding:32px 0 56px; mi
 .skip-link { position:absolute; z-index:100; top:12px; left:12px; padding:12px 20px; background:var(--ink); color:var(--white); transform:translateY(-160%); }
 .skip-link:focus { transform:none; }
 .site-header { position:sticky; top:0; z-index:20; background:var(--paper); border-bottom:1px solid var(--line); }
-.header-inner { width:min(calc(100% - 64px),1280px); margin:auto; display:flex; align-items:center; gap:28px; min-height:84px; padding:14px 0; }
-.header-brand { display:flex; flex-direction:column; gap:6px; flex-shrink:0; }
-.wordmark { display:block; font-family:var(--font-editorial),Georgia,serif; font-size:32px; font-weight:600; line-height:1.12; letter-spacing:-.045em; text-decoration:none; white-space:nowrap; }
+.header-inner { width:min(calc(100% - 64px),1280px); margin:auto; display:flex; align-items:center; gap:28px; min-height:0; padding:12px 0; }
+.header-brand { display:flex; flex-direction:column; gap:3px; flex-shrink:0; }
+.wordmark { display:flex; align-items:baseline; font-family:var(--font-editorial),Georgia,serif; font-size:32px; font-weight:600; line-height:1; letter-spacing:-.045em; text-decoration:none; white-space:nowrap; }
 .wordmark span { font-size:23px; }
+.wordmark span:last-child { margin-left:.15em; }
 .wordmark .wordmark-comma { color:#a8342a; }
-.brand-slogan { margin:0; font-family:var(--font-editorial),Georgia,serif; font-size:15px; font-style:italic; line-height:1.25; color:var(--muted); white-space:nowrap; }
+.brand-slogan { margin:0; font-family:var(--font-editorial),Georgia,serif; font-size:14px; font-style:italic; line-height:1.2; color:var(--muted); white-space:nowrap; }
 .site-nav { display:flex; align-items:center; gap:24px; margin-left:auto; }
 .site-nav a { display:inline-flex; align-items:center; min-height:46px; font-size:14px; text-decoration:none; border-bottom:2px solid transparent; }
 .site-nav a[aria-current=page] { border-color:var(--ink); font-weight:650; }
@@ -50,7 +51,7 @@ main { width:min(calc(100% - 64px),1280px); margin:auto; padding:32px 0 56px; mi
 .discover-intro h1 { font-size:34px; margin-bottom:10px; }
 .discover-intro p { max-width:65ch; font-size:16px; margin:0; }
 .discover-intro .button { flex:none; }
-.landing-page { width:min(calc(100% - 48px),1520px); padding-top:0; }
+.landing-page { width:min(calc(100% - 64px),1280px); padding-top:0; }
 .landing-hero { min-height:calc(100svh - var(--header-height)); display:grid; grid-template-columns:200px minmax(0,1fr) 200px; align-items:center; gap:clamp(18px,2.5vw,40px); padding:24px 0; }
 .hero-copy { text-align:center; min-width:0; padding:24px 0; }
 .hero-eyebrow { color:#a8342a; font-size:12px; font-weight:750; text-transform:uppercase; letter-spacing:.14em; margin:0 0 22px; }
