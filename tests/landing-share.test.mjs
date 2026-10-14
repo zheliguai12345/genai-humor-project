@@ -12,16 +12,40 @@ function nodes(element,result=[]) {
   if(Array.isArray(element)){element.forEach(item=>nodes(item,result));return result;}
   result.push(element);nodes(element.props?.children,result);return result;
 }
-async function shareWidget(navigator,{desktop=false,iconOnly=true}={}) {
-  const slots=[],timers=[];let cursor=0,stopped=0,prevented=0;
-  const hooks={useState(initial){const index=cursor++;if(!(index in slots))slots[index]=initial;return [slots[index],next=>slots[index]=next];},
-    useRef(initial){const index=cursor++;return slots[index]??={current:initial};},useEffect(){}};
+async function shareEnvironment(navigator,{desktop=false}={}) {
+  const timers=[],listeners=new Map();let instance;
+  const hooks={
+    useState(initial){const host=instance,index=host.cursor++;if(!(index in host.slots))host.slots[index]=initial;return [host.slots[index],next=>host.slots[index]=next];},
+    useRef(initial){const index=instance.cursor++;return instance.slots[index]??={current:initial};},
+    useEffect(callback){const index=instance.cursor++;if(!(index in instance.slots)){instance.slots[index]=true;instance.effects.push(callback);}}
+  };
+  const document={
+    addEventListener(type,fn,capture=false){const list=listeners.get(type)??[];list.push({fn,capture});listeners.set(type,list);},
+    removeEventListener(type,fn,capture=false){listeners.set(type,(listeners.get(type)??[]).filter(item=>item.fn!==fn||item.capture!==capture));}
+  };
   const api=await moduleLoader('app/components/share-button.tsx',{'react/jsx-runtime':jsx,react:hooks,navigator,
-    window:{location:{origin:'https://preview.example.test'},matchMedia(query){assert.equal(query,'(hover: hover) and (pointer: fine)');return {matches:desktop};}},
-    setTimeout:(callback,delay)=>{timers.push({callback,delay});return timers.length;},clearTimeout(){}});
-  const render=(status='published')=>{cursor=0;return nodes(api.ShareButton({journey:{...journey,status},iconOnly}));};
-  return {render,timers,stopped:()=>stopped,prevented:()=>prevented,
-    click:()=>render().find(n=>n.type==='button').props.onClick({preventDefault(){prevented++;},stopPropagation(){stopped++;}})};
+    window:{document,location:{origin:'https://preview.example.test'},matchMedia(query){assert.equal(query,'(hover: hover) and (pointer: fine)');return {matches:desktop};}},
+    setTimeout:(callback,delay)=>{timers.push({callback,delay,cleared:false});return timers.length;},clearTimeout(id){timers[id-1].cleared=true;}});
+  const environment={timers,listeners,emit(type,event={}){for(const {fn} of listeners.get(type)??[])fn(event);},
+    widget({iconOnly=true}={}){
+      const host={slots:[],effects:[],cleanups:[],cursor:0};let stopped=0,prevented=0;
+      const target={contains(node){return node===target||node?.parent===target;}};
+      const render=(status='published')=>{
+        instance=host;host.cursor=0;
+        const tree=nodes(api.ShareButton({journey:{...journey,status},iconOnly}));
+        const ref=tree.find(n=>n.type==='button')?.props.ref;if(ref)ref.current=target;
+        for(const effect of host.effects.splice(0))host.cleanups.push(effect());
+        return tree;
+      };
+      return {render,timers,target,environment,stopped:()=>stopped,prevented:()=>prevented,
+        unmount(){for(const cleanup of host.cleanups)cleanup();},
+        click:()=>render().find(n=>n.type==='button').props.onClick({preventDefault(){prevented++;},stopPropagation(){stopped++;}})};
+    }
+  };
+  return environment;
+}
+async function shareWidget(navigator,options={}) {
+  return (await shareEnvironment(navigator,options)).widget(options);
 }
 test('touch native sharing sends title, hook and absolute public URL without bubbling to the card',async()=>{
   const calls=[];const w=await shareWidget({share:async data=>calls.push(data)});await w.click();
@@ -78,4 +102,41 @@ test('photo information button is a compact dark circle enabled only for devices
   assert.match(css,/@media\(hover:none\) \{ \.photo-info \{ display:grid; \} \}/);
   assert.doesNotMatch(css,/\.photo-overlay:hover \.photo-info/);
   assert.equal((css.match(/\.photo-info \{/g)||[]).length,2);
+});
+
+test('only the latest sharing button owns a toast, including overlapping clipboard promises',async()=>{
+  let finish;
+  const env=await shareEnvironment({clipboard:{writeText:()=>new Promise(resolve=>{finish=resolve;})}},{desktop:true});
+  const first=env.widget(),second=env.widget({iconOnly:false});
+  const pendingFirst=first.click(),resolveFirst=finish;
+  const pendingSecond=second.click();finish();await pendingSecond;
+  resolveFirst();await pendingFirst;
+  const visible=w=>w.render().some(n=>n.props?.role==='status');
+  assert.equal(visible(first),false);assert.equal(visible(second),true);
+  const pendingNext=first.click();assert.equal(visible(second),false);
+  assert.equal(env.timers[0].cleared,true);finish();await pendingNext;
+  assert.equal(visible(first),true);assert.equal(visible(second),false);
+  first.unmount();second.unmount();
+});
+test('outside pointerdown, Escape and captured scroll dismiss; own-button pointers and other keys do not',async()=>{
+  const w=await shareWidget({clipboard:{writeText:async()=>{}}},{desktop:true});
+  const visible=()=>w.render().some(n=>n.props?.role==='status');
+  await w.click();w.environment.emit('pointerdown',{target:{parent:w.target}});assert.equal(visible(),true);
+  w.environment.emit('keydown',{key:'Enter'});assert.equal(visible(),true);
+  for(const [type,event] of [['pointerdown',{target:{}}],['keydown',{key:'Escape'}],['scroll',{}]]){
+    await w.click();w.environment.emit(type,event);assert.equal(visible(),false);assert.equal(w.timers.at(-1).cleared,true);
+  }
+  assert.equal(w.environment.listeners.get('scroll')[0].capture,true);
+  w.unmount();
+  assert.ok([...w.environment.listeners.values()].every(list=>list.length===0));
+});
+test('dismissal and unmount prevent delayed clipboard results from resurrecting a toast',async()=>{
+  let finish;
+  const w=await shareWidget({clipboard:{writeText:()=>new Promise(resolve=>{finish=resolve;})}},{desktop:true});
+  const pending=w.click();w.environment.emit('scroll');finish();await pending;
+  assert.ok(!w.render().some(n=>n.props?.role==='status'));assert.equal(w.timers.length,0);
+  const next=w.click();w.unmount();finish();await next;assert.equal(w.timers.length,0);
+  assert.ok([...w.environment.listeners.values()].every(list=>list.length===0));
+  const active=await shareWidget({clipboard:{writeText:async()=>{}}});await active.click();active.unmount();
+  assert.equal(active.timers[0].cleared,true);
 });
