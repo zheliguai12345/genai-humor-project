@@ -19,7 +19,8 @@ export function ShareButton({ journey, iconOnly = false }: {
     if (timer.current) clearTimeout(timer.current);
     const url = new URL(`/journeys/${journey.id}`, window.location.origin).href;
     try {
-      if (typeof navigator.share === "function") await navigator.share({ title: journey.title, text: journey.hook, url });
+      const desktop = window.matchMedia("(hover: hover) and (pointer: fine)").matches;
+      if (!desktop && typeof navigator.share === "function") await navigator.share({ title: journey.title, text: journey.hook, url });
       else {
         if (!navigator.clipboard?.writeText) throw new Error("Clipboard unavailable");
         await navigator.clipboard.writeText(url);

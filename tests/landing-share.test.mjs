@@ -12,18 +12,18 @@ function nodes(element,result=[]) {
   if(Array.isArray(element)){element.forEach(item=>nodes(item,result));return result;}
   result.push(element);nodes(element.props?.children,result);return result;
 }
-async function shareWidget(navigator) {
+async function shareWidget(navigator,{desktop=false,iconOnly=true}={}) {
   const slots=[],timers=[];let cursor=0,stopped=0,prevented=0;
   const hooks={useState(initial){const index=cursor++;if(!(index in slots))slots[index]=initial;return [slots[index],next=>slots[index]=next];},
     useRef(initial){const index=cursor++;return slots[index]??={current:initial};},useEffect(){}};
   const api=await moduleLoader('app/components/share-button.tsx',{'react/jsx-runtime':jsx,react:hooks,navigator,
-    window:{location:{origin:'https://preview.example.test'}},
+    window:{location:{origin:'https://preview.example.test'},matchMedia(query){assert.equal(query,'(hover: hover) and (pointer: fine)');return {matches:desktop};}},
     setTimeout:(callback,delay)=>{timers.push({callback,delay});return timers.length;},clearTimeout(){}});
-  const render=(status='published')=>{cursor=0;return nodes(api.ShareButton({journey:{...journey,status},iconOnly:true}));};
+  const render=(status='published')=>{cursor=0;return nodes(api.ShareButton({journey:{...journey,status},iconOnly}));};
   return {render,timers,stopped:()=>stopped,prevented:()=>prevented,
     click:()=>render().find(n=>n.type==='button').props.onClick({preventDefault(){prevented++;},stopPropagation(){stopped++;}})};
 }
-test('native sharing sends title, hook and absolute public URL without bubbling to the card',async()=>{
+test('touch native sharing sends title, hook and absolute public URL without bubbling to the card',async()=>{
   const calls=[];const w=await shareWidget({share:async data=>calls.push(data)});await w.click();
   assert.equal(calls.length,1);assert.equal(calls[0].title,journey.title);assert.equal(calls[0].text,journey.hook);
   assert.equal(calls[0].url,'https://preview.example.test/journeys/published-id');assert.equal(w.stopped(),1);assert.equal(w.prevented(),1);
@@ -56,4 +56,26 @@ test('hero films are duplicated, decorative and noninteractive; motion and narro
   assert.match(css,/@media\(prefers-reduced-motion:reduce\)[\s\S]*?animation:none/);
   assert.match(css,/@media\(max-width:900px\)[\s\S]*?\.hero-filmstrip \{ display:none/);
   assert.match(css,/\.hero-filmstrip \{[^}]*pointer-events:none/);
+});
+
+for (const iconOnly of [true,false]) {
+  test(`desktop ${iconOnly ? 'card' : 'detail'} sharing copies even when native sharing is available`,async()=>{
+    const copied=[];let nativeCalls=0;
+    const w=await shareWidget({share:async()=>{nativeCalls++;},clipboard:{writeText:async url=>copied.push(url)}},{desktop:true,iconOnly});
+    await w.click();
+    assert.equal(nativeCalls,0);assert.deepEqual(copied,['https://preview.example.test/journeys/published-id']);
+    assert.ok(w.render().some(n=>n.props?.role==='status'&&n.props.children==='Link copied'));
+    assert.equal(w.timers[0].delay,2000);w.timers[0].callback();
+    assert.ok(!w.render().some(n=>n.props?.role==='status'));
+    assert.equal(w.stopped(),1);
+  });
+}
+test('photo information button is a compact dark circle enabled only for devices without hover',()=>{
+  const css=fs.readFileSync(root+'/app/globals.css','utf8');
+  const base=css.match(/\.photo-info \{([^}]+)\}/)[1];
+  assert.match(base,/display:none/);assert.match(base,/width:24px; height:24px/);
+  assert.match(base,/background:rgba\(0,0,0,\.45\); color:#fff/);
+  assert.match(css,/@media\(hover:none\) \{ \.photo-info \{ display:grid; \} \}/);
+  assert.doesNotMatch(css,/\.photo-overlay:hover \.photo-info/);
+  assert.equal((css.match(/\.photo-info \{/g)||[]).length,2);
 });

@@ -138,13 +138,12 @@ main { width:min(calc(100% - 64px),1280px); margin:auto; padding:32px 0 56px; mi
 .photo-credit-overlay a:hover { color:#fff; }
 .photo-credit-overlay a:focus-visible { outline:2px solid #fff; outline-offset:-2px; }
 .photo-overlay.credit-open .photo-credit-overlay { opacity:1; visibility:visible; }
-.photo-info { position:absolute; right:8px; bottom:8px; z-index:4; width:44px; height:44px; display:grid; place-items:center; padding:0; border:1px solid var(--line); border-radius:50%; background:#fffdf8ef; color:var(--ink); font-size:22px; opacity:0; }
-.photo-info:focus-visible { opacity:1; outline-offset:2px; }
-@media(hover:hover) and (min-width:641px) {
+.photo-info { position:absolute; right:8px; bottom:8px; z-index:4; width:24px; height:24px; display:none; place-items:center; padding:0; border:0; border-radius:50%; background:rgba(0,0,0,.45); color:#fff; font-size:16px; }
+.photo-info:focus-visible { outline-offset:2px; }
+@media(hover:hover) {
   .photo-overlay:hover .photo-credit-overlay,.photo-overlay:focus-within .photo-credit-overlay { opacity:1; visibility:visible; }
-  .photo-overlay:hover .photo-info { opacity:1; }
 }
-@media(hover:none) { .photo-info { opacity:1; } }
+@media(hover:none) { .photo-info { display:grid; } }
 .card-copy { padding:16px 18px 14px; }
 .card-copy h2 { font-size:25px; min-height:2.25em; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
 .card-link { text-decoration:none; }
@@ -269,7 +268,6 @@ legend { font-size:14px; font-weight:600; margin-bottom:9px; }
   .journey-grid { grid-template-columns:1fr; gap:22px; }
   .discover-intro { flex-direction:column; align-items:flex-start; gap:16px; }
   .discover-intro h1 { font-size:30px; }
-  .photo-info { opacity:1; }
   .card-photo .photo img,.card-photo .photo-placeholder { height:220px; }
   .card-copy h2 { min-height:0; font-size:27px; }
   .card-copy { padding:18px; }
