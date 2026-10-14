@@ -7,7 +7,13 @@ const origin = process.env.AUTH_TEST_ORIGIN ?? "http://127.0.0.1:3001";
 test("public home loads, protected pages redirect without content", async () => {
   const home = await fetch(origin);
   assert.equal(home.status, 200);
-  assert.match(await home.text(), /Elsewhere, NYC/);
+  const html = await home.text();
+  assert.match(html, /Elsewhere, NYC/);
+  assert.match(html, /<span class="wordmark-comma">,<\/span>/);
+  assert.match(html, /One city\. A thousand ways to live it\./);
+  assert.match(html, /This weekend, live a different story\./);
+  assert.match(html, /AI turns real NYC places into a themed day out\./);
+  assert.doesNotMatch(html, /Ordinary New York\. Extraordinary premises\./);
   for (const path of ["/rate", "/profile", "/create", "/preview/11111111-1111-4111-8111-111111111111"]) {
     const response = await fetch(origin + path, { redirect: "manual" });
     assert.equal(response.status, 307);

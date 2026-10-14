@@ -22,8 +22,11 @@ main { width:min(calc(100% - 64px),1280px); margin:auto; padding:32px 0 56px; mi
 .skip-link:focus { transform:none; }
 .site-header { border-bottom:1px solid var(--line); }
 .header-inner { width:min(calc(100% - 64px),1280px); margin:auto; display:flex; align-items:center; gap:28px; min-height:84px; padding:14px 0; }
-.wordmark { font-family:var(--font-editorial),Georgia,serif; font-size:32px; font-weight:600; letter-spacing:-.045em; text-decoration:none; white-space:nowrap; }
+.header-brand { display:flex; flex-direction:column; gap:6px; flex-shrink:0; }
+.wordmark { display:block; font-family:var(--font-editorial),Georgia,serif; font-size:32px; font-weight:600; line-height:1.12; letter-spacing:-.045em; text-decoration:none; white-space:nowrap; }
 .wordmark span { font-size:23px; }
+.wordmark .wordmark-comma { color:#a8342a; }
+.brand-slogan { margin:0; font-family:var(--font-editorial),Georgia,serif; font-size:15px; font-style:italic; line-height:1.25; color:var(--muted); white-space:nowrap; }
 .site-nav { display:flex; align-items:center; gap:24px; margin-left:auto; }
 .site-nav a { display:inline-flex; align-items:center; min-height:46px; font-size:14px; text-decoration:none; border-bottom:2px solid transparent; }
 .site-nav a[aria-current=page] { border-color:var(--ink); font-weight:650; }
@@ -64,12 +67,16 @@ main { width:min(calc(100% - 64px),1280px); margin:auto; padding:32px 0 56px; mi
 .photo-credit { position:relative; z-index:2; font-size:14px; line-height:1.4; color:var(--muted); padding:8px 14px 0; }
 .photo-credit a { text-decoration:none; }
 .photo-credit a:hover { text-decoration:underline; }
-.photo-credit-overlay { position:absolute; left:8px; bottom:8px; z-index:3; max-width:calc(100% - 68px); padding:8px 10px; border-radius:6px; background:#fffdf8ef; color:var(--ink); box-shadow:0 2px 12px #21392e20; opacity:0; visibility:hidden; pointer-events:none; transition:opacity .15s; }
-.photo-overlay.credit-open .photo-credit-overlay { opacity:1; visibility:visible; pointer-events:auto; }
+.photo-credit-overlay { position:absolute; left:6px; bottom:6px; z-index:3; display:flex; align-items:center; gap:3px; max-width:70%; padding:2px 5px; border-radius:3px; background:#000b; color:#fff; font-size:12px; line-height:1.3; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; opacity:0; visibility:hidden; pointer-events:none; transition:opacity .15s; }
+.photo-credit-overlay a { pointer-events:auto; color:#fff; flex-shrink:0; }
+.photo-credit-overlay a:first-of-type { min-width:0; flex-shrink:1; overflow:hidden; text-overflow:ellipsis; }
+.photo-credit-overlay a:hover { color:#fff; }
+.photo-credit-overlay a:focus-visible { outline:2px solid #fff; outline-offset:-2px; }
+.photo-overlay.credit-open .photo-credit-overlay { opacity:1; visibility:visible; }
 .photo-info { position:absolute; right:8px; bottom:8px; z-index:4; width:44px; height:44px; display:grid; place-items:center; padding:0; border:1px solid var(--line); border-radius:50%; background:#fffdf8ef; color:var(--ink); font-size:22px; opacity:0; }
 .photo-info:focus-visible { opacity:1; outline-offset:2px; }
 @media(hover:hover) and (min-width:641px) {
-  .photo-overlay:hover .photo-credit-overlay,.photo-overlay:focus-within .photo-credit-overlay { opacity:1; visibility:visible; pointer-events:auto; }
+  .photo-overlay:hover .photo-credit-overlay,.photo-overlay:focus-within .photo-credit-overlay { opacity:1; visibility:visible; }
   .photo-overlay:hover .photo-info { opacity:1; }
 }
 @media(hover:none) { .photo-info { opacity:1; } }
@@ -184,7 +191,9 @@ legend { font-size:14px; font-weight:600; margin-bottom:9px; }
 @media(max-width:640px) {
   main { width:calc(100% - 32px); padding:24px 0 40px; }
   .header-inner { width:calc(100% - 32px); flex-wrap:wrap; gap:6px 20px; min-height:0; padding:12px 0; }
-  .wordmark { font-size:29px; margin-right:auto; }
+  .header-brand { margin-right:auto; }
+  .brand-slogan { display:none; }
+  .wordmark { font-size:29px; }
   .wordmark span { font-size:21px; }
   .site-nav { order:3; margin-left:0; gap:26px; width:100%; }
   .google-sign-in { order:4; margin-top:4px; min-height:46px; }

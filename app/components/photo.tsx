@@ -5,7 +5,7 @@ import { unsplashUrl } from "@/utils/journeys/presentation";
 import type { PhotoCandidate } from "@/utils/journeys/types";
 
 export function PhotoCredit({ photo, overlay = false, id }: { photo: PhotoCandidate; overlay?: boolean; id?: string }) {
-  return <figcaption id={id} className={`photo-credit${overlay ? " photo-credit-overlay" : ""}`}>Photo by <a href={unsplashUrl(photo.photographer_username)} target="_blank" rel="noreferrer">{photo.photographer_name}</a> on <a href={unsplashUrl()} target="_blank" rel="noreferrer">Unsplash</a></figcaption>;
+  return <figcaption id={id} className={`photo-credit${overlay ? " photo-credit-overlay" : ""}`}>{!overlay && "Photo by "}<a href={unsplashUrl(photo.photographer_username)} target="_blank" rel="noreferrer">{photo.photographer_name}</a>{overlay ? " / " : " on "}<a href={unsplashUrl()} target="_blank" rel="noreferrer">Unsplash</a></figcaption>;
 }
 function imageAllowed(url: string) {
   try { return new URL(url).origin === "https://images.unsplash.com"; } catch { return false; }
