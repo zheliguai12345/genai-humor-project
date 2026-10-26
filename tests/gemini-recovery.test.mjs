@@ -27,6 +27,7 @@ test('503/504 exhaustion calls default fallback exactly once with its supported 
   assert.deepEqual(a.models,[primary,primary,'gemini-3.5-flash-lite']);assert.deepEqual(a.progress,['provider_retry','fallback']);
   assert.equal(a.calls[0].config.thinkingConfig.thinkingLevel,'LOW');assert.equal(a.calls[2].config.thinkingConfig.thinkingLevel,'MINIMAL');
   assert.equal(a.calls.length,3);assert.deepEqual(a.delays,[2000]);
+  assert.deepEqual(a.timings.map(t=>t.provider_attempt),[1,2,3]);assert.deepEqual(a.timings.map(t=>t.is_fallback),[false,false,true]);assert.equal(a.timings[2].response_output,'fallback raw');assert.equal(a.timings[0].error_message,'Provider request failed.');
   assert.deepEqual(a.timeouts,[60000,60000,12000]);
 });
 test('400, 403, 429 and unrelated network failures never retry; fallback failure never recurses',async()=>{
@@ -40,4 +41,10 @@ test('network timeout recovery and abort are bounded by the overall deadline',as
   const a=await adapter([Object.assign(Error('timeout'),{code:'ETIMEDOUT'}),'raw']);assert.equal(await a.run(),'raw');assert.equal(a.calls.length,2);
   const controller=new AbortController();controller.abort();
   await assert.rejects(a.api.generateJourneyText('system','user',primary,controller.signal));assert.equal(a.calls.length,2);
+});
+
+test('a rejected timing observer cannot fail or retry a successful provider request',async()=>{
+ const a=await adapter(['complete']);
+ assert.equal(await a.api.generateJourneyText('system','user',primary,AbortSignal.timeout(90_000),{onTiming:async()=>{throw Error('logger outage');}}),'complete');
+ assert.equal(a.calls.length,1);
 });

@@ -3,6 +3,7 @@ import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "./server";
 import { configuredModel, generateJourneyText } from "../ai/gemini";
 import { generationTelemetry } from "../ai/generation-telemetry";
+import { bestEffort, promptHash, writeObservation } from "../ai/observability";
 import { SYSTEM_PROMPT, generationPrompt } from "../ai/journey-prompt";
 import { searchJourneyImages, trackPublishedPhoto } from "../ai/unsplash";
 import { JourneyAccessError, JourneyAuthError, JourneyInputError, JourneyOutputError, JourneyServiceError,
@@ -177,6 +178,11 @@ export async function generateJourney(inputValue: unknown, progress?: (event: Ge
     if (reserveError?.message?.includes("daily_generation_limit")) throw new JourneyInputError(`You've reached today's 10-generation limit. 0 attempts remain. Resets ${resetLabel(quotaWindow().resets_at)} New York time.`);
     throw new JourneyServiceError("Unable to record this generation. Please try again.");
   }
+  const systemPromptHash = await promptHash(SYSTEM_PROMPT).catch(() => null);
+  const observations: Promise<void>[] = [];
+  // Start bounded writes immediately, but never spend the generation deadline waiting
+  // for logging. Drain only after the business result is committed or has failed.
+  try {
   for (let attempt = 0; attempt < 2; attempt++) {
     signal.throwIfAborted();
     const userPrompt = generationPrompt(input, correction);
@@ -186,7 +192,15 @@ export async function generateJourney(inputValue: unknown, progress?: (event: Ge
       raw = await telemetry.measure("gemini", attempt + 1, () => generateJourneyText(SYSTEM_PROMPT, userPrompt, model, signal, {
         onModelUsed: used => { actualModel = used; },
         onProgress: stage => progress?.({ stage, attempt: attempt + 1 }),
-        onTiming: timing => telemetry.record("gemini_request", attempt + 1, timing.duration_ms, timing),
+        onTiming: timing => {
+          telemetry.record("gemini_request", attempt + 1, timing.duration_ms, { outcome: timing.outcome, model: timing.model, provider_attempt: timing.provider_attempt, status: timing.status });
+          observations.push(writeObservation(client, "llm_responses", {
+            generation_run_id: runId, validation_attempt: attempt + 1, provider_attempt: timing.provider_attempt,
+            model_name: timing.model, is_fallback: timing.is_fallback, system_prompt_hash: systemPromptHash,
+            user_prompt: userPrompt, response_output: timing.response_output, status: timing.outcome,
+            http_status: timing.status ?? null, error_message: timing.error_message, duration_ms: timing.duration_ms, created_at: timing.created_at,
+          }));
+        },
       }));
       // Keep the exact model response even when parsing, image search, or draft persistence fails.
       const { error: rawError } = await client.from("generation_runs").update({ raw_output: raw, model: actualModel, user_prompt: userPrompt, input: validation_history.length ? { ...input, validation_history } : input })
@@ -198,7 +212,15 @@ export async function generateJourney(inputValue: unknown, progress?: (event: Ge
       const uniqueQueries = [...new Set(queries)];
       progress?.({ stage: "photos", attempt: attempt + 1 });
       const images = new Map(await telemetry.measure("photos", attempt + 1, () => Promise.all(uniqueQueries.map(async (query, query_index) => [query, await searchJourneyImages(query, signal,
-        timing => telemetry.record("unsplash", attempt + 1, timing.duration_ms, { ...timing, query_index }))] as const))));
+        timing => {
+          telemetry.record("unsplash", attempt + 1, timing.duration_ms, { outcome: timing.outcome, search: timing.search, query_index });
+          observations.push(writeObservation(client, "image_searches", {
+            generation_run_id: runId, journey_id: null, position: queries.indexOf(query), query: timing.query,
+            search_kind: timing.search, outcome: timing.outcome, result_count: timing.result_count,
+            http_status: timing.http_status, rate_limit: timing.rate_limit, rate_remaining: timing.rate_remaining,
+            duration_ms: timing.duration_ms, created_at: timing.created_at,
+          }));
+        })] as const))));
       signal.throwIfAborted();
       const { cover_image_query, stops: generatedStops, ...copy } = generated;
       const journey = { ...copy, cover_image: images.get(cover_image_query) ?? null,
@@ -211,6 +233,11 @@ export async function generateJourney(inputValue: unknown, progress?: (event: Ge
         p_user_id: user.id, p_run_id: runId, p_journey: journey,
       }).abortSignal(signal));
       if (saveError || !journeyId) throw new JourneyServiceError("We couldn't confirm the save. Check Your journeys before trying again.");
+      await Promise.allSettled(observations);
+      await bestEffort(async () => {
+        await client.from("image_searches").update({ journey_id: journeyId }).eq("generation_run_id", runId)
+          .is("journey_id", null).abortSignal(AbortSignal.timeout(1_500));
+      });
       telemetry.record("total", attempt + 1, telemetry.result().total_ms, { outcome: "success" });
       return { journey_id: journeyId, generation_run_id: runId, timing: telemetry.result() };
     } catch (error) {
@@ -230,13 +257,14 @@ export async function generateJourney(inputValue: unknown, progress?: (event: Ge
     }
   }
   throw new JourneyServiceError("The journey didn't come together. Please try again.");
+  } finally { await Promise.allSettled(observations); }
 }
 
 export async function publishJourney(id: string, selectionValue: unknown) {
   const user = await requireUser();
   validateId(id);
   const client = journeyClient();
-  const { data: draft, error: readError } = await client.from("journeys").select("id")
+  const { data: draft, error: readError } = await client.from("journeys").select("id,generation_run_id")
     .eq("id", id).eq("author_id", user.id).eq("status", "draft").maybeSingle();
   if (readError) throw new JourneyServiceError("Unable to load this draft.");
   if (!draft) throw new JourneyAccessError("This draft is not available.");
@@ -255,7 +283,12 @@ export async function publishJourney(id: string, selectionValue: unknown) {
     if (!image) return;
     try {
       if (!image.download_location) throw new Error("Missing download location");
-      await trackPublishedPhoto(image.download_location);
+      await trackPublishedPhoto(image.download_location, timing => writeObservation(client, "image_searches", {
+        generation_run_id: draft.generation_run_id ?? null, journey_id: id, position, query: timing.query,
+        search_kind: timing.search, outcome: timing.outcome, result_count: timing.result_count,
+        http_status: timing.http_status, rate_limit: timing.rate_limit, rate_remaining: timing.rate_remaining,
+        duration_ms: timing.duration_ms, created_at: timing.created_at,
+      }));
     } catch {
       // Log only a fixed message and non-sensitive IDs, never URLs, provider errors, or keys.
       console.warn("Unsplash publication tracking failed", { journey_id: id, position });

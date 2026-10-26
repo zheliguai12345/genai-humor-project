@@ -2,8 +2,8 @@ import "server-only";
 import { GoogleGenAI, ThinkingLevel } from "@google/genai";
 import { JOURNEY_SCHEMA, JourneyServiceError } from "../journeys/validation";
 
-type ProviderTiming = { model: string; provider_attempt: number; duration_ms: number; outcome: string; status?: number };
-type Callbacks = { onProgress?: (stage: "provider_retry" | "fallback") => void; onModelUsed?: (model: string) => void; onTiming?: (event: ProviderTiming) => void };
+type ProviderTiming = { model: string; provider_attempt: number; duration_ms: number; outcome: string; status?: number; response_output: string | null; error_message: string | null; is_fallback: boolean; created_at: string };
+type Callbacks = { onProgress?: (stage: "provider_retry" | "fallback") => void; onModelUsed?: (model: string) => void; onTiming?: (event: ProviderTiming) => void | Promise<void> };
 function modelId(value: string | undefined) {
   if (!value || !/^[a-zA-Z0-9._-]+$/.test(value)) throw new JourneyServiceError("Journey generation is not configured.");
   return value;
@@ -30,7 +30,10 @@ export async function generateJourneyText(systemPrompt: string, userPrompt: stri
   // Explicitly bounded provider recovery; SDK transport retries remain disabled.
   const ai = new GoogleGenAI({ apiKey, httpOptions: { timeout: 90_000, retryOptions: { attempts: 1 } } });
   let attempt = 0;
-  async function call(actualModel: string) {
+  async function report(event: ProviderTiming) {
+    try { await callbacks.onTiming?.(event); } catch { /* Best-effort observer. */ }
+  }
+  async function call(actualModel: string, is_fallback = false) {
     signal.throwIfAborted();
     callbacks.onModelUsed?.(actualModel);
     const started = Date.now();
@@ -42,13 +45,14 @@ export async function generateJourneyText(systemPrompt: string, userPrompt: stri
           maxOutputTokens: 8192, abortSignal: callSignal,
           thinkingConfig: { thinkingLevel: actualModel === "gemini-3.5-flash-lite" ? ThinkingLevel.MINIMAL : ThinkingLevel.LOW } },
       });
-      callbacks.onTiming?.({ model: actualModel, provider_attempt, duration_ms: Date.now() - started, outcome: "success" });
+      await report({ model: actualModel, provider_attempt, duration_ms: Date.now() - started, outcome: "success", response_output: response.text ?? "", error_message: null, is_fallback, created_at: new Date(started).toISOString() });
       return { text: response.text ?? "", retryable: false };
     } catch (error) {
       const failure = error as { status?: unknown };
       const status = typeof failure.status === "number" ? failure.status : undefined;
-      const timedOut = !signal.aborted && callSignal.aborted;
-      callbacks.onTiming?.({ model: actualModel, provider_attempt, duration_ms: Date.now() - started, outcome: timedOut ? "timeout" : "error", status });
+      const timedOut = callSignal.aborted && (!signal.aborted || signal.reason?.name === "TimeoutError");
+      await report({ model: actualModel, provider_attempt, duration_ms: Date.now() - started, outcome: timedOut ? "timeout" : "error", status,
+        response_output: null, error_message: timedOut ? "Provider request timed out." : "Provider request failed.", is_fallback, created_at: new Date(started).toISOString() });
       return { error, retryable: !signal.aborted && retryableProviderFailure(error, timedOut) };
     }
   }
@@ -61,7 +65,7 @@ export async function generateJourneyText(systemPrompt: string, userPrompt: stri
   if ("text" in response) return response.text!;
   if (!response.retryable) throw response.error;
   callbacks.onProgress?.("fallback");
-  response = await call(configuredFallbackModel());
+  response = await call(configuredFallbackModel(), true);
   if ("text" in response) return response.text!;
   if (response.retryable) throw new JourneyServiceError("Google is busy right now. Please try again later.");
   throw response.error;
