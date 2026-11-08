@@ -5,7 +5,10 @@ declare model_uuid uuid; provider_uuid uuid; chain_uuid uuid; step_uuid uuid; ta
 begin
  foreach table_name in array array['llm_providers','llm_models','prompt_chains','prompt_chain_steps','prompt_chain_mix','terms','generation_examples','llm_responses','image_searches','allowed_signup_domains','whitelisted_emails'] loop
   if not (select c.relrowsecurity from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relname=table_name) then raise exception 'RLS missing: %',table_name; end if;
-  if exists(select 1 from pg_policies where schemaname='public' and tablename=table_name) then raise exception 'Unexpected policy: %',table_name; end if;
+  if exists(select 1 from pg_policies where schemaname='public' and tablename=table_name
+    and not (cmd='SELECT' and roles=array['supabase_auth_admin'::name]
+      and ((tablename='allowed_signup_domains' and policyname='Auth hook can read signup domains')
+        or (tablename='whitelisted_emails' and policyname='Auth hook can read whitelisted emails')))) then raise exception 'Unexpected policy: %',table_name; end if;
   if has_table_privilege('anon','public.'||table_name,'SELECT') or has_table_privilege('authenticated','public.'||table_name,'SELECT') then raise exception 'Unexpected public grant: %',table_name; end if;
  end loop;
  insert into public.llm_providers(name) values ('Week 7 rollback-only test') returning id into provider_uuid;

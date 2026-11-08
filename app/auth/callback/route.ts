@@ -35,7 +35,12 @@ export async function POST(request: NextRequest) {
   const { error } = await supabase.auth.signInWithIdToken({
     provider: "google", token: credential, nonce,
   });
-  if (error) return redirect(request, "/signin?error=google-sign-in");
+  if (error) {
+    // Supabase returns the hook's HTTP status and message to the Auth client.
+    const signupBlocked = error.status === 403 &&
+      error.message === "This email is not allowed to sign up for Elsewhere.";
+    return redirect(request, signupBlocked ? "/signin?error=signup-not-allowed" : "/signin?error=google-sign-in");
+  }
   const current = await getCurrentProfile();
   if (!current) return redirect(request, "/signin?error=google-sign-in");
   const returnTo = safeReturnPath(cookieStore.get(LOGIN_RETURN_COOKIE)?.value);
