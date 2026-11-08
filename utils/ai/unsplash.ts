@@ -27,10 +27,12 @@ export async function searchJourneyImages(
     ["initial", query],
     ["broader", `${query.trim().split(/\s+/).slice(-3).join(" ")} New York`],
   ];
-  if (geography?.journeyArea?.trim()) {
-    const journeyArea = geography.journeyArea.trim();
-    layers.push(["neighborhood", inNewYork(geography.stopArea?.trim() || journeyArea)]);
-    layers.push(["journey_area", inNewYork(journeyArea)]);
+  if (geography) {
+    const journeyAreas = geography.journeyArea?.split("→").map(area => area.trim()).filter(Boolean) ?? [];
+    const stopArea = geography.stopArea?.split("→").map(area => area.trim()).find(Boolean);
+    const neighborhood = stopArea || journeyAreas[0];
+    if (neighborhood) layers.push(["neighborhood", inNewYork(neighborhood)]);
+    for (const area of journeyAreas) layers.push(["journey_area", inNewYork(area)]);
   }
   const tried = new Set<string>();
   for (const [layer, words] of layers) {

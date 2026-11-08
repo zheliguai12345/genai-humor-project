@@ -12,6 +12,8 @@ test('best-effort writes redact configured secrets and credential URLs, use an i
  await assert.doesNotReject(log.writeObservation({from(){throw Error('connection failed');}},'image_searches',{}));
  await assert.doesNotReject(log.writeObservation({from(){return{insert(){return{abortSignal(){return Promise.reject(Error('timeout'));}};}};}},'llm_responses',{}));
  await assert.doesNotReject(log.bestEffort(()=>{throw Error('synchronous callback');}));
+ assert.equal(warnings.length,3,'returned and thrown database failures each emit one warning');
+ assert.ok(warnings.every(([message])=>message==='Observation write failed'));
  assert.equal(await log.promptHash('system'),'bbc5e661e106c6dcd8dc6dd186454c2fcba3c710fb4d8e71a60c93eaf077f073');
 });
 
@@ -103,4 +105,27 @@ test('journey area supplies a missing stop area without repeating the same reque
    { journeyArea: 'Lower East Side' });
  assert.deepEqual(queries, ['fresh bialys bakery rack', 'bialys bakery rack New York', 'Lower East Side New York']);
  assert.deepEqual(logs.map(entry => entry.search), ['initial', 'broader', 'neighborhood']);
+});
+
+test('arrow-separated journey areas are searched in order without leaking the arrow into queries', async () => {
+ const photo = { urls: { regular: 'https://images.unsplash.com/photo-test' },
+   user: { name: 'Name', username: 'name' }, links: { download_location: 'https://api.unsplash.com/photos/test/download' } };
+ for (const [stopArea, hit, expected] of [
+   ['East Village', 'Lower East Side New York', [['neighborhood', 'East Village New York'], ['journey_area', 'Lower East Side New York']]],
+   ['East Village', 'Chinatown New York', [['neighborhood', 'East Village New York'], ['journey_area', 'Lower East Side New York'], ['journey_area', 'Chinatown New York']]],
+   [undefined, 'Chinatown New York', [['neighborhood', 'Lower East Side New York'], ['journey_area', 'Chinatown New York']]],
+ ]) {
+   const requests = [], logs = [];
+   const api = await moduleLoader('utils/ai/unsplash.ts', { fetch: async url => {
+     const query = url.searchParams.get('query');
+     requests.push(query);
+     return new Response(JSON.stringify({ results: query === hit ? [photo] : [] }));
+   } });
+   const result = await api.searchJourneyImages('fresh bialys bakery rack', AbortSignal.timeout(5000), entry => logs.push(entry),
+     { stopArea, journeyArea: ' Lower East Side → Chinatown ' });
+   assert.ok(result);
+   assert.deepEqual(logs.slice(2).map(entry => [entry.search, entry.query]), expected);
+   assert.deepEqual(requests, logs.map(entry => entry.query));
+   assert.ok(requests.every(query => !query.includes('→')));
+ }
 });

@@ -18,11 +18,12 @@ export async function bestEffort(operation: () => PromiseLike<unknown>) {
 }
 
 export async function writeObservation(client: SupabaseClient, table: "llm_responses" | "image_searches", row: Record<string, unknown>) {
-  await bestEffort(async () => {
+  try {
     const safe = Object.fromEntries(Object.entries(row).map(([key, value]) => [key, typeof value === "string" ? safeLogText(value) : value]));
     const { error } = await client.from(table).insert(safe).abortSignal(AbortSignal.timeout(1_500));
-    if (error) console.warn("Observation write failed", { table });
-  });
+    if (!error) return;
+  } catch { /* Logging failures never affect generation or publication. */ }
+  console.warn("Observation write failed", { table });
 }
 
 export async function promptHash(prompt: string) {
