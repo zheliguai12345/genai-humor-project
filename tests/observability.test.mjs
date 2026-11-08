@@ -33,7 +33,7 @@ test('Unsplash reports every actual request with the actual query, result count,
 });
 
 test('generation commits before draining slow observations and records all calls without leaking text to console',{timeout:5000},async()=>{
- const rows=[],telemetry=[];let runUpdates=0;let releaseLogs; const logsReady=new Promise(resolve=>{releaseLogs=resolve;});
+ const rows=[],telemetry=[],photoQueries=[];let runUpdates=0;let releaseLogs; const logsReady=new Promise(resolve=>{releaseLogs=resolve;});
  const run='11111111-1111-4111-8111-111111111111',journey='22222222-2222-4222-8222-222222222222';
  const client={from(table){const q={insert(row){rows.push({table,...row});return q;},update(){if(table==='generation_runs')runUpdates++;return q;},eq(){return q;},is(){return q;},abortSignal(){return q;},then(resolve){if(table==='llm_responses'||table==='image_searches')logsReady.then(()=>resolve({error:null}));else resolve({error:null});}};return q;},rpc(name){if(name==='save_generated_journey')releaseLogs();const p=Promise.resolve({data:name==='reserve_journey_generation'?run:journey,error:null});p.abortSignal=()=>p;return p;}};
  const generated={cover_image_query:'cover query New York',stops:[{image_query:'stop one New York'},{image_query:'stop two New York'},{image_query:'stop two New York'}]};
@@ -44,12 +44,12 @@ test('generation commits before draining slow observations and records all calls
   '@supabase/supabase-js':{createClient:()=>client},
   '../ai/gemini':{configuredModel:()=> 'primary',generateJourneyText:async(_system,prompt,_model,_signal,callbacks)=>{await callbacks.onTiming({model:'primary',provider_attempt:1,outcome:'error',response_output:null,status:503,error_message:'Provider request failed.',is_fallback:false,duration_ms:10,created_at:new Date().toISOString()});await callbacks.onTiming({model:'fallback',provider_attempt:2,outcome:'success',response_output:'private output',error_message:null,is_fallback:true,duration_ms:20,created_at:new Date().toISOString()});assert.ok(prompt);return 'private output';}},
   '../journeys/validation':{...validation,validateInput:x=>x,validateOutput:()=>generated,JourneyOutputError:class extends Error{},JourneyServiceError:class extends Error{}},
-  '../ai/unsplash':{searchJourneyImages:async(query,_signal,report)=>{await report({query,search:'initial',outcome:'found',result_count:3,http_status:200,rate_limit:50,rate_remaining:47,duration_ms:5,created_at:new Date().toISOString()});return null;},trackPublishedPhoto(){}},
+  '../ai/unsplash':{searchJourneyImages:async(query,_signal,report)=>{photoQueries.push(query);await report({query,search:'initial',outcome:'found',result_count:3,http_status:200,rate_limit:50,rate_remaining:47,duration_ms:5,created_at:new Date().toISOString()});return null;},trackPublishedPhoto(){}},
  });
  assert.equal((await api.generateJourney({time:'afternoon'})).journey_id,journey);
  const llm=rows.filter(r=>r.table==='llm_responses'),images=rows.filter(r=>r.table==='image_searches');
  assert.equal(llm.length,2);assert.equal(llm[0].generation_run_id,run);assert.equal(llm[0].validation_attempt,1);assert.equal(llm[1].is_fallback,true);assert.equal(llm[1].response_output,'private output');assert.equal(llm[1].system_prompt_hash.length,64);
- assert.deepEqual(images.map(r=>r.position),[0,1,2]);assert.equal(images.length,3,'duplicate image queries share one actual provider search');assert.equal(runUpdates,1);
+ assert.deepEqual(images.map(r=>r.position),[0,1,2,3]);assert.equal(photoQueries.length,3,'duplicate queries with the same fallbacks share one provider lookup');assert.equal(runUpdates,1);
  assert.equal(JSON.stringify(telemetry).includes('private output'),false);assert.equal(JSON.stringify(telemetry).includes('cover query'),false);
 });
 
@@ -67,4 +67,40 @@ test('publication tracking rows link both run and journey; a logging outage neve
   assert.equal((await api.publishJourney(id,[0,1,2,3].map(position=>({position,candidate_index:0})))).journey_id,id);
   if(!loggingOutage){assert.equal(writes.length,1);assert.equal(writes[0].generation_run_id,run);assert.equal(writes[0].journey_id,id);assert.equal(writes[0].position,0);assert.equal(writes[0].search_kind,'publish_tracking');}
  }
+});
+
+test('each geographic fallback follows an empty search, stops on success, and logs every attempt', async () => {
+ const photo = { urls: { regular: 'https://images.unsplash.com/photo-test' },
+   user: { name: 'Name', username: 'name' }, links: { download_location: 'https://api.unsplash.com/photos/test/download' } };
+ const expected = [
+   ['initial', 'fresh bialys bakery rack'],
+   ['broader', 'bialys bakery rack New York'],
+   ['neighborhood', 'Lower East Side New York'],
+   ['journey_area', 'Lower East Side and Chinatown New York'],
+ ];
+ for (const firstSuccess of [1, 2, 3, 4, 0]) {
+   const requests = [], logs = [];
+   const api = await moduleLoader('utils/ai/unsplash.ts', { fetch: async url => {
+     requests.push(url.searchParams.get('query'));
+     return new Response(JSON.stringify({ results: requests.length === firstSuccess ? [photo] : [] }));
+   } });
+   const result = await api.searchJourneyImages(expected[0][1], AbortSignal.timeout(5000), entry => logs.push(entry),
+     { stopArea: 'Lower East Side', journeyArea: 'Lower East Side and Chinatown' });
+   assert.equal(Boolean(result), firstSuccess > 0);
+   assert.deepEqual(requests, expected.slice(0, firstSuccess || 4).map(([, query]) => query));
+   assert.deepEqual(logs.map(log => [log.search, log.query]), expected.slice(0, firstSuccess || 4));
+   assert.deepEqual(logs.map(log => log.result_count), requests.map((_, index) => Number(index + 1 === firstSuccess)));
+ }
+});
+
+test('journey area supplies a missing stop area without repeating the same request', async () => {
+ const queries = [], logs = [];
+ const api = await moduleLoader('utils/ai/unsplash.ts', { fetch: async url => {
+   queries.push(url.searchParams.get('query'));
+   return new Response('{"results":[]}');
+ } });
+ await api.searchJourneyImages('fresh bialys bakery rack', AbortSignal.timeout(5000), entry => logs.push(entry),
+   { journeyArea: 'Lower East Side' });
+ assert.deepEqual(queries, ['fresh bialys bakery rack', 'bialys bakery rack New York', 'Lower East Side New York']);
+ assert.deepEqual(logs.map(entry => entry.search), ['initial', 'broader', 'neighborhood']);
 });

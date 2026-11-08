@@ -208,25 +208,40 @@ export async function generateJourney(inputValue: unknown, progress?: (event: Ge
       if (rawError) throw new JourneyServiceError("Unable to record the generated response.");
       progress?.({ stage: "validation", attempt: attempt + 1 });
       const generated = await telemetry.measure("validation", attempt + 1, () => validateOutput(raw!));
-      const queries = [generated.cover_image_query, ...generated.stops.map(s => s.image_query)];
-      const uniqueQueries = [...new Set(queries)];
-      progress?.({ stage: "photos", attempt: attempt + 1 });
-      const images = new Map(await telemetry.measure("photos", attempt + 1, () => Promise.all(uniqueQueries.map(async (query, query_index) => [query, await searchJourneyImages(query, signal,
-        timing => {
-          telemetry.record("unsplash", attempt + 1, timing.duration_ms, { outcome: timing.outcome, search: timing.search, query_index });
-          observations.push(writeObservation(client, "image_searches", {
-            generation_run_id: runId, journey_id: null, position: queries.indexOf(query), query: timing.query,
-            search_kind: timing.search, outcome: timing.outcome, result_count: timing.result_count,
-            http_status: timing.http_status, rate_limit: timing.rate_limit, rate_remaining: timing.rate_remaining,
-            duration_ms: timing.duration_ms, created_at: timing.created_at,
-          }));
-        })] as const))));
-      signal.throwIfAborted();
       const { cover_image_query, stops: generatedStops, ...copy } = generated;
-      const journey = { ...copy, cover_image: images.get(cover_image_query) ?? null,
-        stops: generatedStops.map(s => {
-          const { image_query, ...stop } = s;
-          return { ...stop, image: images.get(image_query) ?? null };
+      // Share a provider lookup only when its query and geographic fallbacks match.
+      // Keep an observation for every position that used the shared result.
+      const slots = [{ query: cover_image_query, stopArea: undefined },
+        ...generatedStops.map(stop => ({ query: stop.image_query, stopArea: stop.image_area }))];
+      const groups = new Map<string, { query: string; stopArea?: string; positions: number[] }>();
+      slots.forEach(({ query, stopArea }, position) => {
+        const key = JSON.stringify([query, stopArea || generated.area]);
+        const existing = groups.get(key);
+        if (existing) existing.positions.push(position);
+        else groups.set(key, { query, stopArea, positions: [position] });
+      });
+      progress?.({ stage: "photos", attempt: attempt + 1 });
+      const images = new Map<number, Awaited<ReturnType<typeof searchJourneyImages>>>();
+      await telemetry.measure("photos", attempt + 1, () => Promise.all([...groups.values()].map(async ({ query, stopArea, positions }, query_index) => {
+        const image = await searchJourneyImages(query, signal, timing => {
+          telemetry.record("unsplash", attempt + 1, timing.duration_ms, { outcome: timing.outcome, search: timing.search, query_index });
+          for (const position of positions) {
+            observations.push(writeObservation(client, "image_searches", {
+              generation_run_id: runId, journey_id: null, position, query: timing.query,
+              search_kind: timing.search, outcome: timing.outcome, result_count: timing.result_count,
+              http_status: timing.http_status, rate_limit: timing.rate_limit, rate_remaining: timing.rate_remaining,
+              duration_ms: timing.duration_ms, created_at: timing.created_at,
+            }));
+          }
+        }, { stopArea, journeyArea: generated.area });
+        for (const position of positions) images.set(position, image);
+      })));
+      signal.throwIfAborted();
+      const journey = { ...copy, cover_image: images.get(0) ?? null,
+        stops: generatedStops.map(({ image_query, image_area, ...stop }, index) => {
+          void image_query;
+          void image_area;
+          return { ...stop, image: images.get(index + 1) ?? null };
         }) };
       progress?.({ stage: "saving", attempt: attempt + 1 });
       const { data: journeyId, error: saveError } = await telemetry.measure("draft_save", attempt + 1, async () => await client.rpc("save_generated_journey", {

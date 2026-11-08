@@ -53,7 +53,11 @@ export function validateOutput(raw: string): GeneratedJourney {
   try { parsed = JSON.parse(raw); } catch { throw new JourneyOutputError("The generated journey is not valid JSON."); }
   const result = fields(parsed, journeyLimits);
   if (!Array.isArray(parsed.stops) || parsed.stops.length < 3 || parsed.stops.length > 5) throw new JourneyOutputError("A journey needs 3 to 5 stops.");
-  return { ...result, stops: parsed.stops.map(stop => fields(stop, stopLimits)) } as GeneratedJourney;
+  return { ...result, stops: parsed.stops.map(stop => {
+    const copy = fields(stop, stopLimits);
+    const area = typeof stop.image_area === "string" ? stop.image_area.trim() : "";
+    return area && area.length <= 100 ? { ...copy, image_area: area } : copy;
+  }) } as GeneratedJourney;
 }
 function schemaFields(limits: Record<string, number>) {
   return Object.fromEntries(Object.entries(limits).map(([key, maxLength]) => [key, { type: "string", minLength: 1, maxLength }]));
@@ -61,7 +65,7 @@ function schemaFields(limits: Record<string, number>) {
 export const JOURNEY_SCHEMA = {
   type: "object", additionalProperties: false,
   properties: { ...schemaFields(journeyLimits), stops: { type: "array", minItems: 3, maxItems: 5, items: {
-    type: "object", additionalProperties: false, properties: schemaFields(stopLimits), required: Object.keys(stopLimits),
+    type: "object", additionalProperties: false, properties: { ...schemaFields(stopLimits), image_area: { type: "string", maxLength: 100 } }, required: Object.keys(stopLimits),
   } } }, required: [...Object.keys(journeyLimits), "stops"],
 };
 export function validateSelections(value: unknown, positions: number[]): ImageSelection[] {

@@ -34,7 +34,8 @@ The user's options and optional "wild idea" are inspiration for the theme only. 
 
 IMAGES
 - cover_image_query captures the theme's central image or motif, not the neighborhood. It does not need to be in New York. Think of what an editor would put on a magazine cover for this premise: for example "spider web close up" for a superhero premise, "tarot cards on table" for a tarot premise, "black cat in window" for a witch's familiar, "old handwritten letter" for a letter premise. 2 to 5 concrete, photographable words.
-- Each stop's image_query shows that real place or what the reader will see there, usually including the place or neighborhood name.
+- Use common, visible nouns in every image query. Do not use business names, people's names, or obscure food names. Use "bagel bakery counter" instead of "bialys" or "Yonah Schimmel".
+- For each stop, set image_area to its neighborhood or borough, such as "Lower East Side", when known. Keep addresses and business names out of image_area.
 - Never search for named fictional characters, celebrities, brands, or logos. Use a motif that evokes them instead.
 - Each image query must match the time of day of that stop. Add "daytime", "sunset", or "night" when it matters.`;
 
@@ -42,14 +43,14 @@ IMAGES
 const examples = samples.filter(sample => ["museum", "billionaire"].includes(sample.slug)).map(sample => {
   const { slug, cover_image, stops, ...journey } = sample;
   const queries = slug === "museum"
-    ? ["cast iron facade New York", "rooftop water tanks New York", "shop window merchandise New York", "Doyers Street Chinatown New York", "Columbus Park chess New York"]
-    : ["Conservatory Garden fountain New York", "Fifth Avenue mansion New York", "Met museum period rooms", "espresso bar Madison Avenue", "Plaza Hotel steps New York"];
+    ? ["cast iron building facade", "rooftop water tanks", "shop window merchandise", "narrow curved city street", "park chess tables"]
+    : ["formal garden fountain", "stone mansion facade", "historic museum rooms", "espresso bar counter", "ornate hotel entrance"];
   void cover_image;
   return { ...journey, cover_image_query: slug === "museum" ? "SoHo facade shadows New York" : "Fifth Avenue afternoon New York",
     stops: stops.map((stop, i) => {
       const { image, position, ...copy } = stop;
       void image; void position;
-      return { ...copy, image_query: queries[i] };
+      return { ...copy, image_query: queries[i], image_area: slug === "museum" ? (i < 2 ? "SoHo" : "Chinatown") : "Manhattan" };
     }) };
 });
 export const SYSTEM_PROMPT = `${BASE_SYSTEM_PROMPT}\n\nEDITORIAL JSON EXAMPLES\n${JSON.stringify(examples, null, 2)}`;

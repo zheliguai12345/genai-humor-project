@@ -16,14 +16,14 @@ export type PhotoCandidate = {
 };
 export type JourneyImage = PhotoCandidate & { candidates: PhotoCandidate[] };
 export type GeneratedStop = {
-  time_label: string; title: string; place: string; body: string; move: string; image_query: string;
+  time_label: string; title: string; place: string; body: string; move: string; image_query: string; image_area?: string;
 };
 export type GeneratedJourney = {
   title: string; kicker: string; hook: string; premise: string;
   when_label: string; budget_label: string; area: string; mode: string; ending: string;
   cover_image_query: string; stops: GeneratedStop[];
 };
-export type JourneyStop = Omit<GeneratedStop, "image_query"> & {
+export type JourneyStop = Omit<GeneratedStop, "image_query" | "image_area"> & {
   journey_id: string; position: number; image: JourneyImage | null;
 };
 export type Journey = Omit<GeneratedJourney, "cover_image_query" | "stops"> & {

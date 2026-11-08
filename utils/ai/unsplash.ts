@@ -9,20 +9,41 @@ function accessKey() {
   if (!key) throw new JourneyServiceError("Photo search is not configured.");
   return key;
 }
-type SearchTiming = { search: "initial" | "broader" | "publish_tracking"; query: string; result_count: number | null; duration_ms: number; outcome: string; http_status: number | null; rate_limit: number | null; rate_remaining: number | null; created_at: string };
+type SearchLayer = "initial" | "broader" | "neighborhood" | "journey_area";
+type SearchTiming = { search: SearchLayer | "publish_tracking"; query: string; result_count: number | null; duration_ms: number; outcome: string; http_status: number | null; rate_limit: number | null; rate_remaining: number | null; created_at: string };
 type Reporter = (timing: SearchTiming) => void | Promise<void>;
 async function emit(report: Reporter | undefined, timing: SearchTiming) {
   try { await report?.(timing); } catch { /* Logging must not affect search or publication. */ }
 }
-export async function searchJourneyImages(query: string, signal: AbortSignal, report?: Reporter): Promise<JourneyImage | null> {
+export async function searchJourneyImages(
+  query: string,
+  signal: AbortSignal,
+  report?: Reporter,
+  geography?: { stopArea?: string; journeyArea: string },
+): Promise<JourneyImage | null> {
   const key = accessKey();
-  const initial = await search(query, key, signal, "initial", report);
-  if (initial === undefined || initial) return initial ?? null;
-  signal.throwIfAborted();
-  const broader = `${query.trim().split(/\s+/).slice(-3).join(" ")} New York`;
-  return await search(broader, key, signal, "broader", report) ?? null;
+  const inNewYork = (area: string) => /\bNew York(?: City)?$/i.test(area) ? area : `${area} New York`;
+  const layers: [SearchLayer, string][] = [
+    ["initial", query],
+    ["broader", `${query.trim().split(/\s+/).slice(-3).join(" ")} New York`],
+  ];
+  if (geography?.journeyArea?.trim()) {
+    const journeyArea = geography.journeyArea.trim();
+    layers.push(["neighborhood", inNewYork(geography.stopArea?.trim() || journeyArea)]);
+    layers.push(["journey_area", inNewYork(journeyArea)]);
+  }
+  const tried = new Set<string>();
+  for (const [layer, words] of layers) {
+    const normalized = words.trim().toLowerCase().replace(/\s+/g, " ");
+    if (tried.has(normalized)) continue;
+    tried.add(normalized);
+    signal.throwIfAborted();
+    const result = await search(words, key, signal, layer, report);
+    if (result !== null) return result ?? null;
+  }
+  return null;
 }
-async function search(query: string, key: string, signal: AbortSignal, search: "initial" | "broader", report?: Reporter): Promise<JourneyImage | null | undefined> {
+async function search(query: string, key: string, signal: AbortSignal, search: SearchLayer, report?: Reporter): Promise<JourneyImage | null | undefined> {
   const started = Date.now();
   const requestSignal = AbortSignal.any([signal, AbortSignal.timeout(2_000)]);
   let outcome = "error";
